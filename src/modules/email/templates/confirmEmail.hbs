@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Confirmación de Correo Electrónico - Novogas">
+    <title>Confirmación de Correo Electrónico - Novogas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #ffffff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-radius: 5px;
+        }
+        h1 {
+            color: #333;
+        }
+        p {
+            color: #555;
+            font-size: 16px;
+            line-height: 1.4;
+        }
+        strong {
+            color: #000;
+        }
+        .emoji {
+            font-size: 24px;
+        }
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>¡Bienvenido a Novogas! 🌟</h1>
+        <p>Hola nuevo usuario,</p>
+        <p>Has solicitado la confirmación de tu correo electrónico en nuestro sitio web.</p>
+        <p>Tu código OTP es: <strong>{{ otpCode }}</strong> 🚀</p>
+        <p>Por favor, utiliza este código dentro de los próximos 10 minutos para completar el proceso de verificación.</p>
+        <p>Si no has realizado esta solicitud, puedes ignorar este correo electrónico.</p>
+        <p>¡Gracias por elegir nuestro servicio! 😃</p>
+    </div>
+    <div class="footer">
+        © {{ year }} Novogas
+    </div>
+</body>
+</html>
