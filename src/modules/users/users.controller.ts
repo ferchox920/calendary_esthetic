@@ -22,27 +22,47 @@ import { AuthorizeGuard } from 'src/utility/guards/authorization.guard';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-
-
   @Post('/register')
-  async signUp(@Body() userSignUp: UserSignUp): Promise<{ user: Partial<UserEntity>; credential: Record<string, string> }> {
-    const result =  await this.usersService.register(userSignUp)
-    return result ;
+  async signUp(
+    @Body() userSignUp: UserSignUp,
+  ): Promise<{
+    user: Partial<UserEntity>;
+    credential: Record<string, string>;
+  }> {
+    const result = await this.usersService.register(userSignUp);
+    return result;
   }
 
   @Post('/login')
-  async signIn(
-    @Body() userSignIn: UserSignIn,
-  ): Promise<{ accessToken: string; user: UserEntity }> {
+  async signIn(@Body() userSignIn: UserSignIn): Promise<{ accessToken: any; user: UserEntity }> {
     const user = await this.usersService.login(userSignIn);
-    const accessToken = await this.usersService.accessToken(user);
+    const accessToken = this.usersService.accessToken(user); 
     return { accessToken, user };
   }
 
+    //TODO: Tipear
+  @Get('generate-otp/:email')
+  async generateOTP(@Param('email') email: string): Promise<any> {
+   const otp = await this.usersService.generateOTP(email.toLowerCase().trim());
+     return otp
+  }
+
+  //TODO: Tipear
+  @Get('validate-otp/:email/:otp')
+  async validateOTP(
+    @Param('email') email: string,
+    @Param('otp') otp: string,
+  ): Promise<any> {
+    const result = await this.usersService.verifyEmail(
+      otp,
+      email.toLowerCase().trim(),
+    );
+    return result;
+  }
 
   @UseGuards(AuthenticationGuard, AuthorizeGuard([Roles.ADMIN]))
   @Get('/all')
-  async findAll(): Promise<UserEntity[]>{
+  async findAll(): Promise<UserEntity[]> {
     return await this.usersService.findAll();
   }
 
@@ -63,7 +83,7 @@ export class UsersController {
 
   @UseGuards(AuthenticationGuard)
   @Get('me')
-  getProfile(@CurrentUser()  currentUser: UserEntity) {
-    return currentUser
+  getProfile(@CurrentUser() currentUser: UserEntity) {
+    return currentUser;
   }
 }

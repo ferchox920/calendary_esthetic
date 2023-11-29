@@ -10,18 +10,15 @@ import * as bcrypt from 'bcrypt';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { DataSource, Repository } from 'typeorm';
-import { UserSignUp } from './dto/user-signup.dto';
 import { UserSignIn } from './dto/user-signin.dto';
-import { sign } from 'jsonwebtoken';
+
 import { UserEntity } from './entities/users.entity';
 import { EmailService } from '../email/email.service';
 import { ConfirmEmailData } from '../email/interface';
 import { TemplateEnum } from '../email/enum/template.enum';
 import { EmailAdminitrationEnum } from 'src/utility/commons/email-adminitration-enum';
-import { JwtPayload } from 'src/utility/interface/jwt-payload.interface';
-import { TokenTypes } from 'src/utility/commons/token-types.enum';
-import { Roles } from 'src/utility/commons/roles-enum';
-import { JwtService } from '@nestjs/jwt';
+
+import { JwtAuthService } from '../jwt/jwt.service';
 
 @Injectable()
 export class UsersService {
@@ -30,7 +27,7 @@ export class UsersService {
     private userRepository: Repository<UserEntity>,
     private readonly emailService: EmailService,
     private readonly dataSource: DataSource,
-    private readonly jwtService: JwtService,
+    private readonly jwtAuthService: JwtAuthService,
   ) {}
 
   async generateOTP(email: string): Promise<string> {
@@ -98,10 +95,16 @@ export class UsersService {
       }
 
       if (user.otpExpiryTime < new Date()) {
-        throw new HttpException('El codigo ha expirado', HttpStatus.BAD_REQUEST);
+        throw new HttpException(
+          'El codigo ha expirado',
+          HttpStatus.BAD_REQUEST,
+        );
       }
       if (user.otp !== otp) {
-        throw new HttpException('El codigo ingresado es incorrecto', HttpStatus.BAD_REQUEST);
+        throw new HttpException(
+          'El codigo ingresado es incorrecto',
+          HttpStatus.BAD_REQUEST,
+        );
       }
 
       user.isVerified = true;
@@ -112,7 +115,12 @@ export class UsersService {
     }
   }
 
-  async register(userSignIn: UserSignIn):Promise<{ user: Partial<UserEntity>; credential: Record<string, string> }> {
+  async register(
+    userSignIn: UserSignIn,
+  ): Promise<{
+    user: Partial<UserEntity>;
+    credential: Record<string, string>;
+  }> {
     const { email, password } = userSignIn;
 
     const verifiedUserWithEmail = await this.userRepository.findOne({
@@ -131,7 +139,10 @@ export class UsersService {
     }
 
     if (verifiedUserWithEmail.deleted) {
-      throw new HttpException('Usuario eliminado por el administrador', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Usuario eliminado por el administrador',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const hashPassword = await bcrypt.hash(password, 10);
@@ -143,21 +154,7 @@ export class UsersService {
       isRegister: true,
     });
 
-    const payload: JwtPayload = {
-      type: TokenTypes.ACCESS,
-      email: createdUser.email,
-      id: createdUser.id,
-      role: Roles.USER,
-    };
-
-    const credential = {
-      access_token: this.jwtService.sign(payload),
-      refresh_token: this.jwtService.sign({
-        ...payload,
-        type: TokenTypes.REFRESH,
-        expireIn: process.env.JWT_EXPIRATION_TIME,
-      }),
-    };
+    const credential = this.jwtAuthService.generateTokens(createdUser);
 
     const { password: _, ...savedUser } = createdUser;
 
@@ -188,6 +185,7 @@ export class UsersService {
     if (!matchPassword) {
       throw new HttpException('Credenciales inválidas', HttpStatus.BAD_REQUEST);
     }
+    
     delete userExisting.password;
 
     return userExisting;
@@ -199,12 +197,11 @@ export class UsersService {
     });
   }
 
-  async accessToken(user: UserEntity): Promise<string> {
-    return sign(
-      { id: user.id, email: user.email },
-      process.env.ACCESS_TOKEN_SECRET_KEY,
-      { expiresIn: process.env.JWT_EXPIRATION_TIME },
-    );
+  async accessToken(
+    user: UserEntity,
+  ): Promise<{ access_token: string; refresh_token: string }> {
+    const credential = this.jwtAuthService.generateTokens(user);
+    return credential;
   }
 
   async findAll(): Promise<UserEntity[]> {
