@@ -24,14 +24,7 @@ export class EmailService {
 
   private readonly TemplatePath = {
     [TemplateEnum.CONFIRM_EMAIL]: path.join(__dirname, 'templates', 'confirmEmail.hbs'),
-    [TemplateEnum.CREATE_ORDER]: path.join(__dirname, 'templates', 'createOrder.hbs'),
-    [TemplateEnum.CREATE_ADMIN]: path.join(__dirname, 'templates', 'createAdmin.hbs'),
-    [TemplateEnum.SUCCESSFUL_CREATE_ADMIN]: path.join(__dirname, 'templates', 'successfulCreateAdmin.hbs'),
-    [TemplateEnum.FORGOT_PASSWORD]: path.join(__dirname, 'templates', 'forgotPassword.hbs'),
-    [TemplateEnum.SUCCESSFUL_CHANGE_PASSWORD]: path.join(__dirname, 'templates', 'successfulChangePassword.hbs'),
-    [TemplateEnum.INVITATION_WORKER]: path.join(__dirname, 'templates', 'invitationWorker.hbs'),
-    [TemplateEnum.REMPLACEMENT_NOTIFICATION]: path.join(__dirname, 'templates', 'remplacementNotification.hbs'),
-    [TemplateEnum.TRANSACTION_NOTIFICATION]: path.join(__dirname, 'templates', 'transactionNotification.hbs'),
+   
   };
 
   private options: EmailModuleOptions[] = [];
