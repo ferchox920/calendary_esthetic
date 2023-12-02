@@ -13,10 +13,19 @@ export class UserEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column('character varying', {
+    name: 'name',
+    length: 50,
+    nullable: true,
+  })
   name: string;
 
-  @Column({ unique: true })
+  @Column('character varying', {
+    name: 'email',
+    length: 100,
+    nullable: false,
+    unique: true,
+  })
   email: string;
 
   @Column('character varying', {
@@ -26,7 +35,11 @@ export class UserEntity {
   })
   number: string;
 
-  @Column({ select: false })
+  @Column('character varying', {
+    name: 'password',
+    length: 100,
+    nullable: true,
+  })
   password: string;
 
   @Column('boolean', {

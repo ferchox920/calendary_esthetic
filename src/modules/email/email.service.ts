@@ -31,6 +31,7 @@ export class EmailService {
     [TemplateEnum.SUCCESSFUL_CHANGE_PASSWORD]: path.join(__dirname, 'templates', 'successfulChangePassword.hbs'),
     [TemplateEnum.INVITATION_WORKER]: path.join(__dirname, 'templates', 'invitationWorker.hbs'),
     [TemplateEnum.REMPLACEMENT_NOTIFICATION]: path.join(__dirname, 'templates', 'remplacementNotification.hbs'),
+    [TemplateEnum.TRANSACTION_NOTIFICATION]: path.join(__dirname, 'templates', 'transactionNotification.hbs'),
   };
 
   private options: EmailModuleOptions[] = [];

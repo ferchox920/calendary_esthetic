@@ -5,6 +5,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserEntity } from './entities/users.entity';
 import { EmailModule } from '../email/email.module';
 import { EmailAdminitrationEnum } from 'src/utility/commons/email-adminitration-enum';
+import { JwtAuthModule } from '../jwt/jwt.module';
+import { JwtAuthService } from '../jwt/jwt.service';
 
 @Module({
   imports: [
@@ -16,6 +18,7 @@ import { EmailAdminitrationEnum } from 'src/utility/commons/email-adminitration-
         key: EmailAdminitrationEnum.NOTIFICATION,
       },
     ]),
+    JwtAuthModule, // Asegúrate de importar JwtAuthModule aquí
   ],
   controllers: [UsersController],
   providers: [UsersService],

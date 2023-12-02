@@ -58,3 +58,12 @@ export interface remplacementNotification {
   year: number;
   /// el resto de data
 }
+export interface transactionsNotifications {
+  name: string;
+  link: string;
+  count: string;
+  sum: string;
+  days: number;
+  year: number;
+  /// el resto de data
+}

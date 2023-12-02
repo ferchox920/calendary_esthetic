@@ -10,13 +10,14 @@ import {
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { UserSignUp } from './dto/user-signup.dto';
+
 import { UserEntity } from './entities/users.entity';
-import { UserSignIn } from './dto/user-signin.dto';
+import { LoginDto } from './dto/login.dto';
 import { CurrentUser } from 'src/utility/decorators/current-user.decorator';
 import { AuthenticationGuard } from 'src/utility/guards/authentification.guard';
 import { Roles } from 'src/utility/commons/roles-enum';
 import { AuthorizeGuard } from 'src/utility/guards/authorization.guard';
+import { RegisterUserDto } from './dto/register-user.dto';
 
 @Controller('users')
 export class UsersController {
@@ -24,19 +25,19 @@ export class UsersController {
 
   @Post('/register')
   async signUp(
-    @Body() userSignUp: UserSignUp,
+    @Body() registerUserDto: RegisterUserDto,
   ): Promise<{
     user: Partial<UserEntity>;
     credential: Record<string, string>;
   }> {
-    const result = await this.usersService.register(userSignUp);
+    const result = await this.usersService.register(registerUserDto);
     return result;
   }
 
   @Post('/login')
-  async signIn(@Body() userSignIn: UserSignIn): Promise<{ accessToken: any; user: UserEntity }> {
-    const user = await this.usersService.login(userSignIn);
-    const accessToken = this.usersService.accessToken(user); 
+  async logiu(@Body() loginDto: LoginDto): Promise<{ accessToken: any; user: UserEntity }> {
+    const user = await this.usersService.login(loginDto);
+    const accessToken = await this.usersService.accessToken(user); 
     return { accessToken, user };
   }
 
