@@ -55,18 +55,18 @@ export class UsersService {
 
       await this.userRepository.save(userToSave);
 
-      // await this.emailService.sendEmail<ConfirmEmailData>(
-      //   {
-      //     to: email,
-      //     subject: 'Confirmacion de Email',
-      //     template: TemplateEnum.CONFIRM_EMAIL,
-      //     data: {
-      //       otpCode: otp,
-      //       year: new Date().getFullYear().toString(),
-      //     },
-      //   },
-      //   EmailAdminitrationEnum.NOTIFICATION,
-      // );
+      await this.emailService.sendEmail<ConfirmEmailData>(
+        {
+          to: email,
+          subject: 'Confirmacion de Email',
+          template: TemplateEnum.CONFIRM_EMAIL,
+          data: {
+            otpCode: otp,
+            year: new Date().getFullYear().toString(),
+          },
+        },
+        EmailAdminitrationEnum.NOTIFICATION,
+      );
       await queryRunner.commitTransaction();
       return otp.toString();
     } catch (ex) {

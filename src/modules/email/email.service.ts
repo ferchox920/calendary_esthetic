@@ -23,7 +23,7 @@ export class EmailService {
   }
 
   private readonly TemplatePath = {
-    [TemplateEnum.CONFIRM_EMAIL]: path.join(__dirname, 'templates', 'confirmEmail.hbs'),
+    [TemplateEnum.CONFIRM_EMAIL]: path.join( 'dist/modules/email/templates', 'confirmEmail.hbs'),
    
   };
 

@@ -6,11 +6,14 @@ import { UserEntity } from './entities/users.entity';
 import { EmailModule } from '../email/email.module';
 import { EmailAdminitrationEnum } from 'src/utility/commons/email-adminitration-enum';
 import { JwtAuthModule } from '../jwt/jwt.module';
-import { JwtAuthService } from '../jwt/jwt.service';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([UserEntity]),
+    TypeOrmModule.forFeature([UserEntity]),   
+    ConfigModule.forRoot({
+      envFilePath: '.env',
+    }),
     EmailModule.forRoot([
       {
         tokenGmail: process.env.TOKEN_GMAIL,
