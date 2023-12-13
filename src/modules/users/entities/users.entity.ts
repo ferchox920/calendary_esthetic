@@ -1,7 +1,9 @@
+import { Exclude } from 'class-transformer';
 import { Roles } from 'src/utility/commons/roles-enum';
 import {
   Column,
   CreateDateColumn,
+  DeleteDateColumn,
   Entity,
   PrimaryGeneratedColumn,
   Timestamp,
@@ -111,16 +113,32 @@ export class UserEntity {
   @Column({ type: 'enum', enum: Roles, array: true, default: [Roles.USER] })
   roles: Roles[];
 
+  @Exclude()
   @CreateDateColumn({
-    type: 'timestamp',
-    default: () => 'CURRENT_TIMESTAMP(6)',
+    type: 'timestamptz',
+    name: 'createdAt',
+    default: () => `now()`,
+    onUpdate: `now()`,
   })
-  createdAt: Timestamp;
+  createdAt: Date;
 
   @UpdateDateColumn({
-    type: 'timestamp',
-    default: () => 'CURRENT_TIMESTAMP(6)',
-    onUpdate: 'CURRENT_TIMESTAMP(6)',
+    type: 'timestamptz',
+    name: 'updatedAt',
+    default: () => `now()`,
+    onUpdate: `now()`,
   })
-  updatedAt: Timestamp;
+  updatedAt: Date;
+
+  @Exclude()
+  @DeleteDateColumn({
+    type: 'timestamptz',
+    name: 'deletedAt',
+    onUpdate: `now()`,
+  })
+  deletedAt?: Date;
+
+  constructor(partial: Partial<UserEntity>) {
+    Object.assign(this, partial);
+  }
 }

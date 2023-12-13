@@ -4,6 +4,7 @@ import { UsersModule } from './modules/users/users.module';
 import { dataSourceOptions } from 'db/data-source';
 import { ProfessionalModule } from './modules/professional/professional.module';
 import { JwtAuthModule } from './modules/jwt/jwt.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import { JwtAuthModule } from './modules/jwt/jwt.module';
     UsersModule,
     ProfessionalModule,
     JwtAuthModule,
+    AdminModule,
   ],
   controllers: [],
   providers: [],

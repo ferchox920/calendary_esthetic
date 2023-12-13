@@ -2,9 +2,7 @@ import { BadRequestException, HttpException, HttpStatus, Injectable } from '@nes
 import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcrypt';
 import { InjectRepository } from '@nestjs/typeorm';
-
 import { DataSource, Repository } from 'typeorm';
-
 import { UserEntity } from './entities/users.entity';
 import { EmailService } from '../email/email.service';
 import { JwtAuthService } from '../jwt/jwt.service';

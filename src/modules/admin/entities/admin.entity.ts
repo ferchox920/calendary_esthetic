@@ -1,19 +1,14 @@
-// professional.entity.ts
-
 import { Exclude } from 'class-transformer';
 import { Roles } from 'src/utility/commons/roles-enum';
-import { Entity, Column, PrimaryGeneratedColumn, UpdateDateColumn, CreateDateColumn, DeleteDateColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, DeleteDateColumn } from 'typeorm';
 
-@Entity({ name: 'professional' })
-export class ProfessionalEntity {
+@Entity({ name: 'admin' })
+export class AdminEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column({ nullable: true })
   DNI: string;
-
-  @Column()
-  lastName: string;
 
   @Column()
   name: string;
@@ -24,29 +19,11 @@ export class ProfessionalEntity {
   @Column({ length: 300, nullable: true })
   avatar: string;
 
-  @Column('text', { nullable: true })
-  description: string;
-
   @Column()
   password: string;
 
-  @Column({ nullable: true })
-  refreshToken: string;
-
-  @Column({ nullable: true })
-  resetToken: string;
-
-  @Column({ type: 'float', default: 1, nullable: true })
-  score: number;
-
-  @Column({ type: 'enum', enum: Roles, array: true, default: [Roles.PROFESSIONAL] })
+  @Column({ type: 'enum', enum: Roles, array: true, default: [Roles.ADMIN] })
   roles: Roles[];
-
-  @Column({
-    type: 'enum',
-    enum: ['pending', 'needConfirm', 'avalible', 'disavalible'],
-  })
-  state: string;
 
   @Exclude()
   @CreateDateColumn({
@@ -73,7 +50,7 @@ export class ProfessionalEntity {
   })
   deletedAt?: Date;
 
-  constructor(partial: Partial<ProfessionalEntity>) {
+  constructor(partial: Partial<AdminEntity>) {
     Object.assign(this, partial);
   }
 }
