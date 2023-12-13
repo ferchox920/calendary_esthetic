@@ -34,17 +34,11 @@ export class AdminService {
     if (existingAdmin) {
       throw new HttpException('The admin is already registered.', HttpStatus.BAD_REQUEST);
     }
-
-    // Hash de la contraseña antes de guardarla en la base de datos
     const hashedPassword = await bcrypt.hash(createAdminDto.password, 10);
-    
-    // Crear una nueva instancia de AdminEntity con los datos proporcionados y la contraseña hasheada
     const newAdmin = this.adminRepository.create({
       ...createAdminDto,
       password: hashedPassword,
     });
-
-    // Guardar el nuevo administrador en la base de datos
     return await this.adminRepository.save(newAdmin);
   }
 
