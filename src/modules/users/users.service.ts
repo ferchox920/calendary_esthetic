@@ -5,13 +5,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { UserEntity } from './entities/users.entity';
 import { EmailService } from '../email/email.service';
-import { JwtAuthService } from '../jwt/jwt.service';
 import { RegisterUserDto } from './dto/register-user.dto';
-import { LoginDto } from './dto/login.dto';
-
 import { EmailAdminitrationEnum } from 'src/utility/commons/email-adminitration-enum';
 import { TemplateEnum } from '../email/enum/template.enum';
 import { ConfirmEmailData } from '../email/interface';
+import { JwtService } from '@nestjs/jwt';
+import { Roles } from 'src/utility/commons/roles-enum';
+import { TokenTypes } from 'src/utility/commons/token-types.enum';
+import { JwtPayload } from '../auth/interface/jwt-payload.interface';
 
 @Injectable()
 export class UsersService {
@@ -19,8 +20,9 @@ export class UsersService {
     @InjectRepository(UserEntity)
     private userRepository: Repository<UserEntity>,
     private readonly emailService: EmailService,
+    private readonly jwtService: JwtService,
     private readonly dataSource: DataSource,
-    private readonly jwtAuthService: JwtAuthService
+
   ) {}
 
   async generateOTP(email: string): Promise<string> {
@@ -63,7 +65,7 @@ export class UsersService {
             year: new Date().getFullYear().toString(),
           },
         },
-        EmailAdminitrationEnum.NOTIFICATION,
+        EmailAdminitrationEnum.NOTIFICATION
       );
       await queryRunner.commitTransaction();
       return otp.toString();
@@ -133,7 +135,23 @@ export class UsersService {
       isRegister: true,
     });
 
-    const credential = this.jwtAuthService.generateTokens(createdUser);
+    const payload: JwtPayload = {
+      userType: Roles.USER,
+      type: TokenTypes.ACCESS,
+      email: createdUser.email,
+      id: createdUser.id,
+      roles: Roles.USER,
+    };
+
+    const credential = {
+      access_token: this.jwtService.sign(payload),
+      refresh_token: this.jwtService.sign({
+        ...payload,
+        type: TokenTypes.REFRESH,
+        expireIn: process.env.JWT_EXPIRATION_TIME,
+      }),
+    };
+
 
     const { password: _, ...savedUser } = createdUser;
 
@@ -142,33 +160,38 @@ export class UsersService {
       credential,
     };
   }
+  async findById(id: string): Promise<UserEntity> {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    return user;
+  }
 
-  async login(loginDto: LoginDto): Promise<UserEntity> {
-    const { email, password } = loginDto;
+async login(email: string, password: string): Promise<UserEntity> {
 
-    const userExisting = await this.userRepository
-      .createQueryBuilder('users')
-      .addSelect('users.password')
-      .where('users.email = :email', { email })
-      .getOne();
+  const userExisting = await this.userRepository
+  .createQueryBuilder('users')
+  .addSelect('users.password')
+  .where('users.email = :email', { email })
+  .getOne();
+  
+  if (!userExisting) {
+    throw new BadRequestException('User does not exist');
+  }
+  
+  if (!userExisting || !userExisting.isVerified) {
+    throw new HttpException('Credenciales inválidas', HttpStatus.BAD_REQUEST);
+  }
 
-    if (!userExisting) {
-      throw new BadRequestException('User does not exist');
-    }
-
-    if (!userExisting || !userExisting.isVerified) {
-      throw new HttpException('Credenciales inválidas', HttpStatus.BAD_REQUEST);
-    }
     const matchPassword = await bcrypt.compare(password, userExisting.password);
 
     if (!matchPassword) {
       throw new HttpException('Credenciales inválidas', HttpStatus.BAD_REQUEST);
     }
-
-    delete userExisting.password;
+    
 
     return userExisting;
   }
+
 
   async findOneByEmail(email: string): Promise<UserEntity | null> {
     return this.userRepository.findOne({
@@ -177,7 +200,22 @@ export class UsersService {
   }
 
   async accessToken(user: UserEntity): Promise<{ access_token: string; refresh_token: string }> {
-    const credential = this.jwtAuthService.generateTokens(user);
+    const payload: JwtPayload = {
+      userType: Roles.USER,
+      type: TokenTypes.ACCESS,
+      email: user.email,
+      id: user.id,
+      roles: Roles.USER,
+    };
+
+    const credential = {
+      access_token: this.jwtService.sign(payload),
+      refresh_token: this.jwtService.sign({
+        ...payload,
+        type: TokenTypes.REFRESH,
+        expireIn: process.env.JWT_EXPIRATION_TIME,
+      }),
+    };
     return credential;
   }
 
@@ -197,11 +235,28 @@ export class UsersService {
     return user;
   }
 
+
+
   update(id: number, updateUserDto: UpdateUserDto) {
     return `This action updates a #${id} user`;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  async remove(id: string) {
+    const user = await this.userRepository.findOne({
+      where: {
+        id: id,
+        deleted: false,
+      },
+    });
+
+    if (!user) {
+      throw new BadRequestException('User not found or already deleted');
+    }
+
+    // Soft-delete the user by setting the 'deleted' flag to true
+    user.deleted = true;
+    await this.userRepository.save(user);
+
+    return `User #${id} has been successfully removed`;
   }
 }

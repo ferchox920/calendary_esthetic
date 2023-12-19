@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Param, Body, Put, Delete } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { AdminEntity } from './entities/admin.entity';
+import { CreateAdminDto } from './dto/create-admin.dto';
 
 @Controller('admin')
 export class AdminController {
@@ -17,8 +18,8 @@ export class AdminController {
   }
 
   @Post()
-  create(@Body() admin: AdminEntity, key: string): Promise<AdminEntity> {
-    return this.adminService.create(admin, key);
+  create(@Body() createAdminDto: CreateAdminDto): Promise<AdminEntity> {
+    return this.adminService.create(createAdminDto);
   }
 
   @Put(':id')

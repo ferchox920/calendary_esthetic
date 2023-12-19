@@ -34,12 +34,7 @@ export class UsersController {
     return result;
   }
 
-  @Post('/login')
-  async logiu(@Body() loginDto: LoginDto): Promise<{ accessToken: any; user: UserEntity }> {
-    const user = await this.usersService.login(loginDto);
-    const accessToken = await this.usersService.accessToken(user); 
-    return { accessToken, user };
-  }
+
 
     //TODO: Tipear
   @Get('generate-otp/:email')
@@ -79,7 +74,7 @@ export class UsersController {
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.usersService.remove(+id);
+    return this.usersService.remove(id);
   }
 
   @UseGuards(AuthenticationGuard)

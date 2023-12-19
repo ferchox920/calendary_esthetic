@@ -5,12 +5,18 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserEntity } from './entities/users.entity';
 import { EmailModule } from '../email/email.module';
 import { EmailAdminitrationEnum } from 'src/utility/commons/email-adminitration-enum';
-import { JwtAuthModule } from '../jwt/jwt.module';
+
 import { ConfigModule } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([UserEntity]),   
+    TypeOrmModule.forFeature([UserEntity]),
+    JwtModule.register({
+      global: true,
+      secret: process.env.JWT_SECRET,
+      signOptions: { expiresIn: process.env.JWT_EXPIRATION_TIME },
+    }),
     ConfigModule.forRoot({
       envFilePath: '.env',
     }),
@@ -21,7 +27,6 @@ import { ConfigModule } from '@nestjs/config';
         key: EmailAdminitrationEnum.NOTIFICATION,
       },
     ]),
-    JwtAuthModule, // Asegúrate de importar JwtAuthModule aquí
   ],
   controllers: [UsersController],
   providers: [UsersService],
