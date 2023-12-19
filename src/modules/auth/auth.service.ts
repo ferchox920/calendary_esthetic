@@ -8,8 +8,8 @@ import { Repository } from 'typeorm';
 import { AdminService } from '../admin/admin.service';
 import { UserEntity } from '../users/entities/users.entity';
 import { AdminEntity } from '../admin/entities/admin.entity';
-import { Roles } from 'src/utility/commons/roles-enum';
-import { TokenTypes } from 'src/utility/commons/token-types.enum';
+import { Roles } from 'src/utility/common/roles-enum';
+import { TokenTypes } from 'src/utility/common/token-types.enum';
 import { UsersService } from '../users/users.service';
 import { JwtPayload } from './interface/jwt-payload.interface';
 
@@ -29,10 +29,9 @@ export class AuthService {
   async login(user: JwtPayload) {
     let profile: UserEntity | AdminEntity;
 
-    switch (user.roles[0]) {
+    switch (user.roles) {
       case Roles.USER:
         profile = await this.userRepository.findOne({ where: { id: user.id } });
-
         break;
 
       case Roles.ADMIN:
@@ -48,12 +47,13 @@ export class AuthService {
     const credential = await this.authGenericResponse(user);
 
     return {
-      profile: profile || user,
+      profile,
       credential,
     };
   }
 
   async authGenericResponse(user: JwtPayload | UserEntity | AdminEntity) {
+  
     return {
       access_token: this.generateToken(user, TokenTypes.ACCESS),
       refresh_token: this.generateToken(user, TokenTypes.REFRESH, {
@@ -91,7 +91,7 @@ export class AuthService {
       type: type,
       email: user.email,
       id: user.id,
-      role: user.roles,
+      roles: user.roles,
     };
 
     const options: JwtSignOptions = {
@@ -105,6 +105,8 @@ export class AuthService {
   async validate(email: string, password: string, type: string): Promise<any> {
     switch (type) {
       case Roles.USER:
+    
+        
         return await this.usersService.login(email, password);
 
       case Roles.ADMIN:
@@ -114,6 +116,7 @@ export class AuthService {
   }
 
   async refreshToken(userId: string) {
+  
     const user = await this.usersService.findById(userId);
     if (!user) {
       throw new HttpException('User not found', HttpStatus.BAD_REQUEST);

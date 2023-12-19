@@ -4,7 +4,7 @@ import { UsersController } from './users.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserEntity } from './entities/users.entity';
 import { EmailModule } from '../email/email.module';
-import { EmailAdminitrationEnum } from 'src/utility/commons/email-adminitration-enum';
+import { EmailAdminitrationEnum } from 'src/utility/common/email-adminitration-enum';
 
 import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';

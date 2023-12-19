@@ -1,5 +1,5 @@
-import { Roles } from "src/utility/commons/roles-enum";
-import { TokenTypes } from "src/utility/commons/token-types.enum";
+import { Roles } from "src/utility/common/roles-enum";
+import { TokenTypes } from "src/utility/common/token-types.enum";
 
 
 

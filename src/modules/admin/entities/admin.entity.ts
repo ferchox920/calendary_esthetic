@@ -1,5 +1,5 @@
 import { Exclude } from 'class-transformer';
-import { Roles } from 'src/utility/commons/roles-enum';
+import { Roles } from 'src/utility/common/roles-enum';
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, DeleteDateColumn } from 'typeorm';
 
 @Entity({ name: 'admin' })
@@ -22,8 +22,8 @@ export class AdminEntity {
   @Column()
   password: string;
 
-  @Column({ type: 'enum', enum: Roles, array: true, default: [Roles.ADMIN] })
-  roles: Roles[];
+  @Column({ type: 'enum', enum: Roles,  default: Roles.ADMIN })
+  roles: Roles;
 
   @Exclude()
   @CreateDateColumn({

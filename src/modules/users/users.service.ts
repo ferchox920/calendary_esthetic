@@ -6,12 +6,12 @@ import { DataSource, Repository } from 'typeorm';
 import { UserEntity } from './entities/users.entity';
 import { EmailService } from '../email/email.service';
 import { RegisterUserDto } from './dto/register-user.dto';
-import { EmailAdminitrationEnum } from 'src/utility/commons/email-adminitration-enum';
+import { EmailAdminitrationEnum } from 'src/utility/common/email-adminitration-enum';
 import { TemplateEnum } from '../email/enum/template.enum';
 import { ConfirmEmailData } from '../email/interface';
 import { JwtService } from '@nestjs/jwt';
-import { Roles } from 'src/utility/commons/roles-enum';
-import { TokenTypes } from 'src/utility/commons/token-types.enum';
+import { Roles } from 'src/utility/common/roles-enum';
+import { TokenTypes } from 'src/utility/common/token-types.enum';
 import { JwtPayload } from '../auth/interface/jwt-payload.interface';
 
 @Injectable()
@@ -131,27 +131,29 @@ export class UsersService {
     const createdUser = await this.userRepository.save({
       ...verifiedUserWithEmail,
       ...registerUserDto,
+      roles: Roles.USER,
       password: hashPassword, // Corregir el nombre del campo de la contraseña
       isRegister: true,
     });
+
 
     const payload: JwtPayload = {
       userType: Roles.USER,
       type: TokenTypes.ACCESS,
       email: createdUser.email,
       id: createdUser.id,
-      roles: Roles.USER,
+      roles: createdUser.roles,
     };
 
     const credential = {
-      access_token: this.jwtService.sign(payload),
+      access_token: this.jwtService.sign(payload, { secret: process.env.JWT_SECRET }),
       refresh_token: this.jwtService.sign({
         ...payload,
         type: TokenTypes.REFRESH,
-        expireIn: process.env.JWT_EXPIRATION_TIME,
+        expiresIn: process.env.JWT_EXPIRATION_TIME,
       }),
     };
-
+    
 
     const { password: _, ...savedUser } = createdUser;
 
@@ -160,6 +162,7 @@ export class UsersService {
       credential,
     };
   }
+  
   async findById(id: string): Promise<UserEntity> {
     const user = await this.userRepository.findOne({ where: { id } });
     if (!user) throw new HttpException('User not found', HttpStatus.NOT_FOUND);
@@ -181,14 +184,15 @@ async login(email: string, password: string): Promise<UserEntity> {
   if (!userExisting || !userExisting.isVerified) {
     throw new HttpException('Credenciales inválidas', HttpStatus.BAD_REQUEST);
   }
+  
+  const matchPassword = await bcrypt.compare(password, userExisting.password);
+  
+  if (!matchPassword) {
+    throw new HttpException('Credenciales inválidas', HttpStatus.BAD_REQUEST);
+  }
+  
 
-    const matchPassword = await bcrypt.compare(password, userExisting.password);
-
-    if (!matchPassword) {
-      throw new HttpException('Credenciales inválidas', HttpStatus.BAD_REQUEST);
-    }
-    
-
+  
     return userExisting;
   }
 
@@ -199,25 +203,7 @@ async login(email: string, password: string): Promise<UserEntity> {
     });
   }
 
-  async accessToken(user: UserEntity): Promise<{ access_token: string; refresh_token: string }> {
-    const payload: JwtPayload = {
-      userType: Roles.USER,
-      type: TokenTypes.ACCESS,
-      email: user.email,
-      id: user.id,
-      roles: Roles.USER,
-    };
 
-    const credential = {
-      access_token: this.jwtService.sign(payload),
-      refresh_token: this.jwtService.sign({
-        ...payload,
-        type: TokenTypes.REFRESH,
-        expireIn: process.env.JWT_EXPIRATION_TIME,
-      }),
-    };
-    return credential;
-  }
 
   async findAll(): Promise<UserEntity[]> {
     return await this.userRepository.find();

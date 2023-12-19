@@ -1,6 +1,4 @@
 import { IsEmail, IsNotEmpty, IsString, IsArray } from 'class-validator';
-import { Roles } from 'src/utility/commons/roles-enum';
-
 export class CreateAdminDto {
   @IsString()
   @IsNotEmpty()

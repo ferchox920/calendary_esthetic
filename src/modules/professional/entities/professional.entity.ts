@@ -1,7 +1,7 @@
 // professional.entity.ts
 
 import { Exclude } from 'class-transformer';
-import { Roles } from 'src/utility/commons/roles-enum';
+import { Roles } from 'src/utility/common/roles-enum';
 import { Entity, Column, PrimaryGeneratedColumn, UpdateDateColumn, CreateDateColumn, DeleteDateColumn } from 'typeorm';
 
 @Entity({ name: 'professional' })
