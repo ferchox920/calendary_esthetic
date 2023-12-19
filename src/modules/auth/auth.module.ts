@@ -20,7 +20,7 @@ import { CommonService } from 'src/utility/common/services/common.service';
     AdminModule,
     TypeOrmModule.forFeature([UserEntity, AdminEntity]),
     JwtModule.register({
-      secret: process.env.JWT_SECRET,
+      secret: process.env.ACCESS_TOKEN_SECRET_KEY,
       signOptions: { expiresIn: '1h' },
     }),
   ],

@@ -14,7 +14,7 @@ import { JwtModule } from '@nestjs/jwt';
     TypeOrmModule.forFeature([UserEntity]),
     JwtModule.register({
       global: true,
-      secret: process.env.JWT_SECRET,
+      secret: process.env.ACCESS_TOKEN_SECRET_KEY,
       signOptions: { expiresIn: process.env.JWT_EXPIRATION_TIME },
     }),
     ConfigModule.forRoot({

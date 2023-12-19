@@ -21,8 +21,7 @@ export class UsersService {
     private userRepository: Repository<UserEntity>,
     private readonly emailService: EmailService,
     private readonly jwtService: JwtService,
-    private readonly dataSource: DataSource,
-
+    private readonly dataSource: DataSource
   ) {}
 
   async generateOTP(email: string): Promise<string> {
@@ -137,23 +136,23 @@ export class UsersService {
     });
 
 
-    const payload: JwtPayload = {
-      userType: Roles.USER,
-      type: TokenTypes.ACCESS,
-      email: createdUser.email,
-      id: createdUser.id,
-      roles: createdUser.roles,
-    };
 
     const credential = {
-      access_token: this.jwtService.sign(payload, { secret: process.env.JWT_SECRET }),
-      refresh_token: this.jwtService.sign({
-        ...payload,
-        type: TokenTypes.REFRESH,
-        expiresIn: process.env.JWT_EXPIRATION_TIME,
+      access_token: this.generateAccessToken( {
+        userType: Roles.USER,
+        type: TokenTypes.ACCESS,
+        email: createdUser.email,
+        id: createdUser.id,
+        roles: createdUser.roles,
       }),
+      refresh_token:this.generateRefreshToken( {
+        userType: Roles.USER,
+        type: TokenTypes.REFRESH,
+        email: createdUser.email,
+        id: createdUser.id,
+        roles: createdUser.roles,
+      })
     };
-    
 
     const { password: _, ...savedUser } = createdUser;
 
@@ -162,48 +161,42 @@ export class UsersService {
       credential,
     };
   }
-  
+
   async findById(id: string): Promise<UserEntity> {
     const user = await this.userRepository.findOne({ where: { id } });
     if (!user) throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     return user;
   }
 
-async login(email: string, password: string): Promise<UserEntity> {
+  async login(email: string, password: string): Promise<UserEntity> {
+    const userExisting = await this.userRepository
+      .createQueryBuilder('users')
+      .addSelect('users.password')
+      .where('users.email = :email', { email })
+      .getOne();
 
-  const userExisting = await this.userRepository
-  .createQueryBuilder('users')
-  .addSelect('users.password')
-  .where('users.email = :email', { email })
-  .getOne();
-  
-  if (!userExisting) {
-    throw new BadRequestException('User does not exist');
-  }
-  
-  if (!userExisting || !userExisting.isVerified) {
-    throw new HttpException('Credenciales inválidas', HttpStatus.BAD_REQUEST);
-  }
-  
-  const matchPassword = await bcrypt.compare(password, userExisting.password);
-  
-  if (!matchPassword) {
-    throw new HttpException('Credenciales inválidas', HttpStatus.BAD_REQUEST);
-  }
-  
+    if (!userExisting) {
+      throw new BadRequestException('User does not exist');
+    }
 
-  
+    if (!userExisting || !userExisting.isVerified) {
+      throw new HttpException('Credenciales inválidas', HttpStatus.BAD_REQUEST);
+    }
+
+    const matchPassword = await bcrypt.compare(password, userExisting.password);
+
+    if (!matchPassword) {
+      throw new HttpException('Credenciales inválidas', HttpStatus.BAD_REQUEST);
+    }
+
     return userExisting;
   }
-
 
   async findOneByEmail(email: string): Promise<UserEntity | null> {
     return this.userRepository.findOne({
       where: { email },
     });
   }
-
-
 
   async findAll(): Promise<UserEntity[]> {
     return await this.userRepository.find();
@@ -221,7 +214,19 @@ async login(email: string, password: string): Promise<UserEntity> {
     return user;
   }
 
+  generateAccessToken(payload: Record<string, any>): string {
+    return this.jwtService.sign(payload, {
+      secret: process.env.ACCESS_TOKEN_SECRET_KEY,
+      expiresIn: process.env.JWT_EXPIRATION_TIME || '1h',
+    });
+  }
 
+  generateRefreshToken(payload: Record<string, any>): string {
+    return this.jwtService.sign(payload, {
+      secret: process.env.ACCESS_TOKEN_SECRET_KEY,
+      expiresIn: process.env.JWT_EXPIRATION_TIME_REFRESH || '7d',
+    });
+  }
 
   update(id: number, updateUserDto: UpdateUserDto) {
     return `This action updates a #${id} user`;
