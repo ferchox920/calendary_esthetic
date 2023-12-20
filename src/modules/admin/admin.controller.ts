@@ -8,8 +8,8 @@ export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
   @Get()
-  findAll(): Promise<AdminEntity[]> {
-    return this.adminService.findAll();
+  async findAll(): Promise<AdminEntity[]> {
+    return await this.adminService.findAll();
   }
 
   @Get(':id')

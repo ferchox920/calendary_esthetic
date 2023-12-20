@@ -12,6 +12,8 @@ import { Roles } from 'src/utility/common/roles-enum';
 import { TokenTypes } from 'src/utility/common/token-types.enum';
 import { UsersService } from '../users/users.service';
 import { JwtPayload } from './interface/jwt-payload.interface';
+import { ProfessionalEntity } from '../professional/entities/professional.entity';
+import { ProfessionalService } from '../professional/professional.service';
 
 @Injectable()
 export class AuthService {
@@ -20,8 +22,11 @@ export class AuthService {
     private readonly userRepository: Repository<UserEntity>,
     @InjectRepository(AdminEntity)
     private readonly adminRepository: Repository<AdminEntity>,
+    @InjectRepository(ProfessionalEntity)
+    private readonly professionalRepository: Repository<ProfessionalEntity>,
     private readonly usersService: UsersService,
     private readonly adminService: AdminService,
+    private readonly professionalService: ProfessionalService,
     private readonly jwtService: JwtService,
     private config: ConfigService
   ) {}
@@ -39,6 +44,11 @@ export class AuthService {
           where: { id: user.id },
         });
         break;
+      case Roles.PROFESSIONAL:
+        profile = await this.professionalRepository.findOne({
+          where: { id: user.id },
+        });
+        break;
 
       default:
         throw new Error('Invalid role');
@@ -53,7 +63,6 @@ export class AuthService {
   }
 
   async authGenericResponse(user: JwtPayload | UserEntity | AdminEntity) {
-  
     return {
       access_token: this.generateToken(user, TokenTypes.ACCESS),
       refresh_token: this.generateToken(user, TokenTypes.REFRESH, {
@@ -105,18 +114,16 @@ export class AuthService {
   async validate(email: string, password: string, type: string): Promise<any> {
     switch (type) {
       case Roles.USER:
-    
-        
         return await this.usersService.login(email, password);
-
       case Roles.ADMIN:
         return await this.adminService.login(email, password);
+      case Roles.PROFESSIONAL:
+        return await this.professionalService.login(email, password);
     }
     throw new HttpException('Invalid credentials', HttpStatus.UNAUTHORIZED);
   }
 
   async refreshToken(userId: string) {
-  
     const user = await this.usersService.findById(userId);
     if (!user) {
       throw new HttpException('User not found', HttpStatus.BAD_REQUEST);

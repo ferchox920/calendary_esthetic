@@ -2,7 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { CommonService } from './utility/common/services/common.service';
+import { CommonService } from './utility/middleware/services/common.service';
 import * as bodyParser from 'body-parser';
 import morgan from 'morgan';
 import compression from 'compression';

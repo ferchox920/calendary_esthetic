@@ -1,26 +1,97 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateProfessionalDto } from './dto/create-professional.dto';
 import { UpdateProfessionalDto } from './dto/update-professional.dto';
+import { ProfessionalEntity } from './entities/professional.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import * as bcrypt from 'bcrypt';
+import { Roles } from 'src/utility/common/roles-enum';
 
 @Injectable()
 export class ProfessionalService {
-  create(createProfessionalDto: CreateProfessionalDto) {
-    return 'This action adds a new professional';
+  constructor(
+    @InjectRepository(ProfessionalEntity)
+    private professionalRepository: Repository<ProfessionalEntity>
+  ) {}
+
+  async create(createProfessionalDto: CreateProfessionalDto): Promise<ProfessionalEntity> {
+    const existingProfessional = await this.professionalRepository.findOne({
+      where: { email: createProfessionalDto.email },
+    });
+    if (existingProfessional) {
+      throw new HttpException('The professional is already registered.', HttpStatus.BAD_REQUEST);
+    }
+    const hashedPassword = await bcrypt.hash(createProfessionalDto.password, 10);
+    const newAdmin = this.professionalRepository.create({
+      ...createProfessionalDto,
+      roles: Roles.PROFESSIONAL,
+      password: hashedPassword,
+    });
+    return await this.professionalRepository.save(newAdmin);
+  }
+  async login(email: string, password: string) {
+    try {
+      const profesional = await this.professionalRepository.findOne({
+        where: {
+          email,
+        },
+      });
+
+      if (!profesional) {
+        throw new HttpException('Credenciales incorrectas!', HttpStatus.UNAUTHORIZED);
+      }
+      const isPasswordMatching = await bcrypt.compare(password, profesional.password);
+      if (!isPasswordMatching) {
+        throw new HttpException('Credenciales incorrectas!', HttpStatus.BAD_REQUEST);
+      }
+      return profesional;
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      } else {
+        throw new HttpException('Error al iniciar sesión', HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+    }
+  }
+  async findAll() {
+    return await this.professionalRepository.find();
   }
 
-  findAll() {
-    return `This action returns all professional`;
+  async findOne(id: string): Promise<ProfessionalEntity | undefined> {
+    return await this.professionalRepository.findOne({
+      where: {
+        id: id,
+      },
+    });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} professional`;
+  async update(id: string, updateProfessionalDto: UpdateProfessionalDto): Promise<ProfessionalEntity> {
+    const professional = await this.professionalRepository.findOne({
+      where: {
+        id: id,
+      },
+    });
+
+    if (!professional) {
+      throw new NotFoundException(`Professional with ID ${id} not found`);
+    }
+    Object.assign(professional, updateProfessionalDto);
+
+    return this.professionalRepository.save(professional);
   }
 
-  update(id: number, updateProfessionalDto: UpdateProfessionalDto) {
-    return `This action updates a #${id} professional`;
-  }
+  async remove(id: string): Promise<void> {
+    const professional = await this.professionalRepository.findOne({
+      where: {
+        id: id,
+      },
+    });
 
-  remove(id: number) {
-    return `This action removes a #${id} professional`;
+    if (!professional) {
+      throw new NotFoundException(`Professional with ID ${id} not found`);
+    }
+
+    // Eliminar el profesional de la base de datos
+    await this.professionalRepository.remove(professional);
   }
 }

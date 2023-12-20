@@ -10,10 +10,10 @@ import {
   Req,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LocalAuthGuard } from 'src/utility/guards/local-auth.guard';
+import { LocalAuthGuard } from 'src/modules/auth/guards/local-auth.guard';
 import { JwtPayload } from './interface/jwt-payload.interface';
-import { JwtAuthGuard } from 'src/utility/guards/jwt-auth.guard';
-import { SignatureGuard } from 'src/utility/common/interceptors/signature.guard';
+import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
+// import { SignatureGuard } from 'src/utility/middleware/interceptors/signature.guard';
 
 @Controller('auth')
 export class AuthController {

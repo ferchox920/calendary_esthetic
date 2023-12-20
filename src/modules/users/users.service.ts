@@ -12,7 +12,7 @@ import { ConfirmEmailData } from '../email/interface';
 import { JwtService } from '@nestjs/jwt';
 import { Roles } from 'src/utility/common/roles-enum';
 import { TokenTypes } from 'src/utility/common/token-types.enum';
-import { JwtPayload } from '../auth/interface/jwt-payload.interface';
+
 
 @Injectable()
 export class UsersService {
@@ -131,7 +131,7 @@ export class UsersService {
       ...verifiedUserWithEmail,
       ...registerUserDto,
       roles: Roles.USER,
-      password: hashPassword, // Corregir el nombre del campo de la contraseña
+      password: hashPassword,
       isRegister: true,
     });
 
@@ -228,7 +228,7 @@ export class UsersService {
     });
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
+  update(id: string, updateUserDto: UpdateUserDto) {
     return `This action updates a #${id} user`;
   }
 
@@ -244,7 +244,6 @@ export class UsersService {
       throw new BadRequestException('User not found or already deleted');
     }
 
-    // Soft-delete the user by setting the 'deleted' flag to true
     user.deleted = true;
     await this.userRepository.save(user);
 

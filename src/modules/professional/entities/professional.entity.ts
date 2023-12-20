@@ -1,6 +1,7 @@
 // professional.entity.ts
 
 import { Exclude } from 'class-transformer';
+import { ProfesionalStatus } from 'src/utility/common/professional-status.enum';
 import { Roles } from 'src/utility/common/roles-enum';
 import { Entity, Column, PrimaryGeneratedColumn, UpdateDateColumn, CreateDateColumn, DeleteDateColumn } from 'typeorm';
 
@@ -30,23 +31,19 @@ export class ProfessionalEntity {
   @Column()
   password: string;
 
-  @Column({ nullable: true })
-  refreshToken: string;
-
-  @Column({ nullable: true })
-  resetToken: string;
 
   @Column({ type: 'float', default: 1, nullable: true })
   score: number;
 
-  @Column({ type: 'enum', enum: Roles, array: true, default: [Roles.PROFESSIONAL] })
-  roles: Roles[];
+  @Column({ type: 'enum', enum: Roles,  default: [Roles.PROFESSIONAL] })
+  roles: Roles;
 
   @Column({
     type: 'enum',
-    enum: ['pending', 'needConfirm', 'avalible', 'disavalible'],
+    enum: ProfesionalStatus,
+    default: ProfesionalStatus.AVALIBLE,
   })
-  state: string;
+  state: ProfesionalStatus;
 
   @Exclude()
   @CreateDateColumn({

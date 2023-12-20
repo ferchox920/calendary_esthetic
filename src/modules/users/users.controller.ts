@@ -1,14 +1,11 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
-
 import { UserEntity } from './entities/users.entity';
-
-import { CurrentUser } from 'src/utility/decorators/current-user.decorator';
 import { Roles } from 'src/utility/common/roles-enum';
-import { AuthorizeGuard } from 'src/utility/guards/authorization.guard';
+import { AuthorizeGuard } from 'src/modules/auth/guards/authorization.guard';
 import { RegisterUserDto } from './dto/register-user.dto';
-import { JwtAuthGuard } from 'src/utility/guards/jwt-auth.guard';
+import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 
 @Controller('users')
 export class UsersController {
@@ -49,12 +46,12 @@ export class UsersController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(+id, updateUserDto);
+  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+    return await this.usersService.update(id, updateUserDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(id);
+  async remove(@Param('id') id: string) {
+    return await this.usersService.remove(id);
   }
 }
