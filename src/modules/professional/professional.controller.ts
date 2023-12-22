@@ -22,6 +22,14 @@ export class ProfessionalController {
     return await this.professionalService.findAll();
   }
 
+  
+  @UseGuards(JwtAuthGuard, AuthorizeGuard([Roles.ADMIN]))
+  @Post(':id/professions')
+  async addProfessionsToProfessional(@Param('id') id: string, @Body() body: { professionIds: string[] }): Promise<any> {
+    const { professionIds } = body;
+    return this.professionalService.addProfessionsToProfessional(id, professionIds);
+  }
+
   @Get(':id')
   async findOne(@Param('id') id: string) {
     return await this.professionalService.findOne(id);

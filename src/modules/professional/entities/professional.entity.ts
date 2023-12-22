@@ -1,9 +1,10 @@
 // professional.entity.ts
 
 import { Exclude } from 'class-transformer';
+import { ProfessionEntity } from 'src/modules/profession/entities/profession.entity';
 import { ProfesionalStatus } from 'src/utility/common/professional-status.enum';
 import { Roles } from 'src/utility/common/roles-enum';
-import { Entity, Column, PrimaryGeneratedColumn, UpdateDateColumn, CreateDateColumn, DeleteDateColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, UpdateDateColumn, CreateDateColumn, DeleteDateColumn, ManyToOne, JoinColumn, ManyToMany, JoinTable } from 'typeorm';
 
 @Entity({ name: 'professional' })
 export class ProfessionalEntity {
@@ -69,6 +70,11 @@ export class ProfessionalEntity {
     onUpdate: `now()`,
   })
   deletedAt?: Date;
+
+  @ManyToMany(() => ProfessionEntity)
+  @JoinTable()
+  professions: ProfessionEntity[];
+
 
   constructor(partial: Partial<ProfessionalEntity>) {
     Object.assign(this, partial);

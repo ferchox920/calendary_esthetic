@@ -5,6 +5,7 @@ import { dataSourceOptions } from 'db/data-source';
 import { ProfessionalModule } from './modules/professional/professional.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { ProfessionModule } from './modules/profession/profession.module';
 
 
 @Module({
@@ -15,6 +16,7 @@ import { AuthModule } from './modules/auth/auth.module';
     ProfessionalModule,
     AdminModule,
     AuthModule,
+    ProfessionModule,
   ],
   controllers: [],
   providers: [],

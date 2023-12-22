@@ -6,12 +6,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { Roles } from 'src/utility/common/roles-enum';
+import { ProfessionEntity } from '../profession/entities/profession.entity';
 
 @Injectable()
 export class ProfessionalService {
   constructor(
     @InjectRepository(ProfessionalEntity)
-    private professionalRepository: Repository<ProfessionalEntity>
+    private professionalRepository: Repository<ProfessionalEntity>,
+    @InjectRepository(ProfessionEntity)
+    private readonly professionRepository: Repository<ProfessionEntity>
   ) {}
 
   async create(createProfessionalDto: CreateProfessionalDto): Promise<ProfessionalEntity> {
@@ -29,6 +32,34 @@ export class ProfessionalService {
     });
     return await this.professionalRepository.save(newAdmin);
   }
+
+  async addProfessionsToProfessional(
+    professionalId: string,
+    professionIds: string | string[]
+  ): Promise<ProfessionalEntity> {
+    const professional = await this.professionalRepository.findOne({
+      where: { id: professionalId },
+      relations: ['profession'],
+    });
+
+    if (!professional) {
+      throw new NotFoundException('Professional not found');
+    }
+
+    const professionIdsArray = Array.isArray(professionIds) ? professionIds : [professionIds];
+    const professions = await Promise.all(
+      professionIdsArray.map((id) => this.professionRepository.findOne({ where: { id } }))
+    );
+
+    if (!professions.every(Boolean)) {
+      throw new NotFoundException('One or more professions not found');
+    }
+
+    professional.professions = professions;
+
+    return await this.professionalRepository.save(professional);
+  }
+
   async login(email: string, password: string) {
     try {
       const profesional = await this.professionalRepository.findOne({
