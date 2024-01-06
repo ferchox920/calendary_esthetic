@@ -7,6 +7,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ProfessionModule } from './modules/profession/profession.module';
 import { ActivityModule } from './modules/activity/activity.module';
+import { ConsultationModule } from './modules/consultation/consultation.module';
 
 
 @Module({
@@ -19,6 +20,7 @@ import { ActivityModule } from './modules/activity/activity.module';
     AuthModule,
     ProfessionModule,
     ActivityModule,
+    ConsultationModule,
   ],
   controllers: [],
   providers: [],
