@@ -39,8 +39,9 @@ export class ProfessionalService {
   ): Promise<ProfessionalEntity> {
     const professional = await this.professionalRepository.findOne({
       where: { id: professionalId },
-      relations: ['profession'],
+      relations: ['professions'],
     });
+
 
     if (!professional) {
       throw new NotFoundException('Professional not found');
@@ -85,14 +86,14 @@ export class ProfessionalService {
     }
   }
   async findAll() {
-    return await this.professionalRepository.find();
+    return await this.professionalRepository.find({ relations: ['professions'] });
   }
-
+  
   async findOne(id: string): Promise<ProfessionalEntity | undefined> {
     return await this.professionalRepository.findOne({
       where: {
         id: id,
-      },
+      },relations:['professions'],
     });
   }
 

@@ -6,6 +6,7 @@ import { ProfessionalModule } from './modules/professional/professional.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ProfessionModule } from './modules/profession/profession.module';
+import { ActivityModule } from './modules/activity/activity.module';
 
 
 @Module({
@@ -17,6 +18,7 @@ import { ProfessionModule } from './modules/profession/profession.module';
     AdminModule,
     AuthModule,
     ProfessionModule,
+    ActivityModule,
   ],
   controllers: [],
   providers: [],
