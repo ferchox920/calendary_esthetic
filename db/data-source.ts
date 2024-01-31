@@ -1,14 +1,24 @@
+import { config } from 'dotenv';
 import { DataSource, DataSourceOptions } from 'typeorm';
+config();
 
 export const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',
-  url: process.env.DATABASE_URL, // Usa la variable de entorno que contiene el connection string
+  host: process.env.POSTGRES_HOST,
+  schema: process.env.POSTGRES_SHEMA,
+  port: parseInt(process.env.POSTGRES_PORT, 10),
+  username: process.env.POSTGRES_USER,
+  password: process.env.POSTGRES_PASSWORD,
+  database: process.env.POSTGRES_DATABASE,
   entities: ['dist/**/*.entity{.ts,.js}'],
   migrations: ['dist/db/migrations/*{.ts,js}'],
   synchronize: false,
   logging: false,
-  ssl: {
-    rejectUnauthorized: false, // Acepta certificados autofirmados
+  extra: {
+    ssl: {
+      rejectUnauthorized: false, // Solo si es necesario, dependiendo de la configuración del servidor PostgreSQL.
+      sslmode: 'require',
+    },
   },
 };
 
