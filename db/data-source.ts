@@ -7,7 +7,9 @@ export const dataSourceOptions: DataSourceOptions = {
   migrations: ['dist/db/migrations/*{.ts,js}'],
   synchronize: false,
   logging: false,
-  ssl: true
+  ssl: {
+    rejectUnauthorized: false, // Acepta certificados autofirmados
+  },
 };
 
 const dataSource = new DataSource(dataSourceOptions);
