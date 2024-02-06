@@ -119,7 +119,7 @@ export class AuthService {
       case Roles.ADMIN:
         return await this.adminService.login(payload);
       case Roles.PROFESSIONAL:
-        return await this.professionalService.login(email, password);
+        return await this.professionalService.login(payload);
     }
     throw new HttpException('Invalid credentials', HttpStatus.UNAUTHORIZED);
   }

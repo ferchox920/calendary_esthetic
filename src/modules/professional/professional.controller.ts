@@ -23,23 +23,28 @@ export class ProfessionalController {
   }
 
   @ApiOperation({ summary: 'Get all professionals' })
-  @ApiResponse({ status: 200, description: 'Return all professionals', type: CreateProfessionalDto, isArray: true })
+  @ApiResponse({ status: 200, description: 'Return all professionals', isArray: true })
   @UseGuards(JwtAuthGuard, AuthorizeGuard([Roles.ADMIN]))
   @Get()
   async findAll() {
     return await this.professionalService.findAll();
   }
 
+  @ApiOperation({ summary: 'Add professions to a professional' })
+  @ApiParam({ name: 'id', description: 'Professional ID', type: 'string' })
+  @ApiBody({ type: () => ({ professionIds: [String] }) })
   @ApiResponse({ status: 200, description: 'Professions added successfully' })
   @UseGuards(JwtAuthGuard, AuthorizeGuard([Roles.ADMIN]))
   @Post(':id/professions')
   async addProfessionsToProfessional(
     @Param('id') id: string,
-    @Body() body: { professionIds: string[] },
+    @Body() body: { professionIds: string[] }
   ): Promise<any> {
     const { professionIds } = body;
     return this.professionalService.addProfessionsToProfessional(id, professionIds);
   }
+  
+  
 
   @ApiOperation({ summary: 'Get a professional by ID' })
   @ApiResponse({ status: 200, description: 'Return a professional by ID', type: CreateProfessionalDto })
