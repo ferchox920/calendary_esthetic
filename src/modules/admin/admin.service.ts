@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AdminEntity } from './entities/admin.entity';
 import { CreateAdminDto } from './dto/create-admin.dto';
+import { LoginAdminDto } from './dto/login-admin.dto';
 import * as bcrypt from 'bcrypt';
 import { Roles } from 'src/utility/common/roles-enum';
 
@@ -38,13 +39,17 @@ export class AdminService {
     const hashedPassword = await bcrypt.hash(createAdminDto.password, 10);
     const newAdmin = this.adminRepository.create({
       ...createAdminDto,
-      roles:Roles.ADMIN,
+      roles: Roles.ADMIN,
       password: hashedPassword,
     });
     return await this.adminRepository.save(newAdmin);
   }
 
-  async login(email: string, password: string) {
+  async login(loginAdminDto: LoginAdminDto) {
+    const { email, password } = loginAdminDto;
+    if(loginAdminDto.type!= Roles.ADMIN){
+      throw new HttpException('Credenciales incorrectas!', HttpStatus.UNAUTHORIZED);
+	  }
     try {
       const admin = await this.adminRepository.findOne({
         where: {

@@ -2,7 +2,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-local';
 import { AuthService } from '../auth.service';
-import { Roles } from 'src/utility/common/roles-enum';
+
 
 @Injectable()
 export class LocalStrategy extends PassportStrategy(Strategy) {
@@ -19,10 +19,7 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
 
 
 
-    if (email.toLowerCase() === process.env.EMAIL_NODEMAIL.toLowerCase()) {
-      type = Roles.ADMIN;
-    }
-
+  //TODO: logica de validacion de admin
     
     const user = await this.authService.validate(email, password, type);
     if (!user) {
