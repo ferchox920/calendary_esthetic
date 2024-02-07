@@ -7,9 +7,6 @@ export class ConsultationEntity {
   id: string;
 
   @Column()
-  price: string;
-
-  @Column()
   status: string;
 
   @Column()
