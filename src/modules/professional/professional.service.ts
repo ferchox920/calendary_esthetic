@@ -1,5 +1,4 @@
 import { HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
-import { LoginProfessionalDto } from './dto/login-professional.dto';
 import { CreateProfessionalDto } from './dto/create-professional.dto';
 import { UpdateProfessionalDto } from './dto/update-professional.dto';
 import { ProfessionalEntity } from './entities/professional.entity';
@@ -8,6 +7,7 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { Roles } from 'src/utility/common/roles-enum';
 import { ProfessionEntity } from '../profession/entities/profession.entity';
+import { LoginProfessionalDto } from './dto/login-professional.dto';
 
 @Injectable()
 export class ProfessionalService {
@@ -42,7 +42,6 @@ export class ProfessionalService {
       where: { id: professionalId },
       relations: ['professions'],
     });
-
 
     if (!professional) {
       throw new NotFoundException('Professional not found');
@@ -89,12 +88,6 @@ export class ProfessionalService {
   }
   async findAll() {
     return await this.professionalRepository.find({ relations: ['professions'] });
-  }
-
-  async findOneAuth(id: string): Promise<ProfessionalEntity> {
-    return this.professionalRepository.findOne({
-      where: { id },
-    });
   }
 
   async findOne(id: string): Promise<ProfessionalEntity | undefined> {

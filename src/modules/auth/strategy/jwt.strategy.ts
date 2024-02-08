@@ -36,7 +36,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         user = await this.adminServices.findOne(payload.id);
         break;
       case Roles.PROFESSIONAL:
-        user = await this.professionalService.findOneAuth(payload.id);
+        user = await this.professionalService.findOne(payload.id);
         break;
     }
 
