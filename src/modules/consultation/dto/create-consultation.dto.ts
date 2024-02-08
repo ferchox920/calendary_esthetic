@@ -26,9 +26,4 @@ export class CreateConsultationDto {
   @IsNotEmpty({ message: 'Activity ID is required' })
   @IsUUID('4', { message: 'Invalid activity ID' })
   activityId: string;
-
-  @ApiProperty({ description: 'ID of the user associated with the consultation' })
-  @IsNotEmpty({ message: 'User ID is required' })
-  @IsUUID('4', { message: 'Invalid user ID' })
-  userId: string;
 }

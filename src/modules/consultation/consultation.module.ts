@@ -5,10 +5,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ActivityEntity } from '../activity/entities/activity.entity';
 import { ProfessionalEntity } from '../professional/entities/professional.entity';
 import { ConsultationEntity } from './entities/consultation.entity';
-import { UserEntity } from '../users/entities/users.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([ConsultationEntity,ActivityEntity,ProfessionalEntity, UserEntity])],
+  imports: [TypeOrmModule.forFeature([ConsultationEntity,ActivityEntity,ProfessionalEntity])],
   controllers: [ConsultationController],
   providers: [ConsultationService],
 })

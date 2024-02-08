@@ -115,8 +115,9 @@ export class UserEntity {
   @Column({ type: 'enum', enum: Roles,  default: Roles.USER })
   roles: Roles;
 
-  @OneToMany(() => ConsultationEntity, (consultations) => consultations.user)
+  @OneToMany(() => ConsultationEntity, (consultation) => consultation.user)
   consultations: ConsultationEntity[];
+
 
   @Exclude()
   @CreateDateColumn({
