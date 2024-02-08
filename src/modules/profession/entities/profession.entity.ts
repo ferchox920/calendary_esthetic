@@ -1,5 +1,6 @@
 // profession.entity.ts
 import { ActivityEntity } from 'src/modules/activity/entities/activity.entity';
+import { ConsultationEntity } from 'src/modules/consultation/entities/consultation.entity';
 import { ProfessionalEntity } from 'src/modules/professional/entities/professional.entity';
 
 import { Entity, Column, PrimaryGeneratedColumn, OneToMany, ManyToMany, JoinTable } from 'typeorm';
@@ -19,6 +20,7 @@ export class ProfessionEntity {
   @JoinTable()
   professionals: ProfessionalEntity[];
 
-  @OneToMany(() => ActivityEntity, activity => activity.profession)  // Relación con ActivityEntity
+  @OneToMany(() => ActivityEntity, activity => activity.profession)  
   activities: ActivityEntity[];
+
 }

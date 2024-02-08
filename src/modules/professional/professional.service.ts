@@ -1,4 +1,5 @@
 import { HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { LoginProfessionalDto } from './dto/login-professional.dto';
 import { CreateProfessionalDto } from './dto/create-professional.dto';
 import { UpdateProfessionalDto } from './dto/update-professional.dto';
 import { ProfessionalEntity } from './entities/professional.entity';
@@ -42,26 +43,33 @@ export class ProfessionalService {
       relations: ['professions'],
     });
 
-
     if (!professional) {
       throw new NotFoundException('Professional not found');
     }
-
     const professionIdsArray = Array.isArray(professionIds) ? professionIds : [professionIds];
-    const professions = await Promise.all(
-      professionIdsArray.map((id) => this.professionRepository.findOne({ where: { id } }))
+    const existingProfessions = professional.professions.filter((existingProfession) =>
+      professionIdsArray.includes(existingProfession.id)
     );
 
-    if (!professions.every(Boolean)) {
-      throw new NotFoundException('One or more professions not found');
+    const newProfessionIds = professionIdsArray.filter(
+      (newProfessionId) => !existingProfessions.some((existingProfession) => existingProfession.id === newProfessionId)
+    );
+
+    if (newProfessionIds.length > 0) {
+      const newProfessions = await Promise.all(
+        newProfessionIds.map((id) => this.professionRepository.findOne({ where: { id } }))
+      );
+
+      professional.professions.push(...newProfessions);
+
+      return await this.professionalRepository.save(professional);
     }
 
-    professional.professions = professions;
-
-    return await this.professionalRepository.save(professional);
+    return professional;
   }
 
-  async login(email: string, password: string) {
+  async login(loginProfessionalDto: LoginProfessionalDto) {
+    const { email, password } = loginProfessionalDto;
     try {
       const profesional = await this.professionalRepository.findOne({
         where: {
@@ -88,12 +96,19 @@ export class ProfessionalService {
   async findAll() {
     return await this.professionalRepository.find({ relations: ['professions'] });
   }
-  
+
+  async findOneAuth(id: string): Promise<ProfessionalEntity> {
+    return this.professionalRepository.findOne({
+      where: { id },
+    });
+  }
+
   async findOne(id: string): Promise<ProfessionalEntity | undefined> {
     return await this.professionalRepository.findOne({
       where: {
         id: id,
-      },relations:['professions'],
+      },
+      relations: ['professions'],
     });
   }
 

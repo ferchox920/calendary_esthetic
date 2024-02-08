@@ -5,12 +5,14 @@ import { JwtPayload } from '../interface/jwt-payload.interface';
 import { UsersService } from 'src/modules/users/users.service';
 import { AdminService } from 'src/modules/admin/admin.service';
 import { Roles } from 'src/utility/common/roles-enum';
+import { ProfessionalService } from 'src/modules/professional/professional.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     private usersService: UsersService,
-    private adminServices: AdminService
+    private adminServices: AdminService,
+    private professionalService: ProfessionalService
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -31,6 +33,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
       case Roles.ADMIN:
         user = await this.adminServices.findOne(payload.id);
+        break;
+      case Roles.PROFESSIONAL:
+        user = await this.professionalService.findOne(payload.id);
         break;
     }
 

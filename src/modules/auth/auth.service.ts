@@ -112,13 +112,14 @@ export class AuthService {
   }
 
   async validate(email: string, password: string, type: string): Promise<any> {
+    let payload = { email, password, type}
     switch (type) {
       case Roles.USER:
-        return await this.usersService.login(email, password);
-      case Roles.ADMIN:
-        return await this.adminService.login(email, password);
+      //   return await this.usersService.login(payload);
+      // case Roles.ADMIN:
+      //   return await this.adminService.login(payload);
       case Roles.PROFESSIONAL:
-        return await this.professionalService.login(email, password);
+        return await this.professionalService.login(payload);
     }
     throw new HttpException('Invalid credentials', HttpStatus.UNAUTHORIZED);
   }
