@@ -7,6 +7,7 @@ import { AdminService } from 'src/modules/admin/admin.service';
 import { Roles } from 'src/utility/common/roles-enum';
 import { ProfessionalService } from 'src/modules/professional/professional.service';
 
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(

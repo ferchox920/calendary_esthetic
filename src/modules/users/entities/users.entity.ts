@@ -1,10 +1,12 @@
 import { Exclude } from 'class-transformer';
+import { ConsultationEntity } from 'src/modules/consultation/entities/consultation.entity';
 import { Roles } from 'src/utility/common/roles-enum';
 import {
   Column,
   CreateDateColumn,
   DeleteDateColumn,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
   Timestamp,
   UpdateDateColumn,
@@ -112,6 +114,9 @@ export class UserEntity {
 
   @Column({ type: 'enum', enum: Roles,  default: Roles.USER })
   roles: Roles;
+
+  @OneToMany(() => ConsultationEntity, (consultations) => consultations.user)
+  consultations: ConsultationEntity[];
 
   @Exclude()
   @CreateDateColumn({

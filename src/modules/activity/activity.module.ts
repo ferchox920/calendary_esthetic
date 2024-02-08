@@ -7,7 +7,7 @@ import { ActivityEntity } from './entities/activity.entity';
 import { ConsultationEntity } from '../consultation/entities/consultation.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([ActivityEntity,ProfessionEntity,ConsultationEntity])],
+  imports: [TypeOrmModule.forFeature([ActivityEntity,ProfessionEntity])],
   controllers: [ActivityController],
   providers: [ActivityService],
 })

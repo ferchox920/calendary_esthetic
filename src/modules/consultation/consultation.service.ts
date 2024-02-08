@@ -6,6 +6,7 @@ import { CreateConsultationDto } from './dto/create-consultation.dto';
 import { UpdateConsultationDto } from './dto/update-consultation.dto';
 import { ProfessionalEntity } from '../professional/entities/professional.entity';
 import { ActivityEntity } from '../activity/entities/activity.entity';
+import { UserEntity } from '../users/entities/users.entity';
 
 @Injectable()
 export class ConsultationService {
@@ -15,11 +16,13 @@ export class ConsultationService {
     @InjectRepository(ProfessionalEntity)
     private readonly professionalRepository: Repository<ProfessionalEntity>,
     @InjectRepository(ActivityEntity)
-    private readonly activityRepository: Repository<ActivityEntity>
+    private readonly activityRepository: Repository<ActivityEntity>,
+    @InjectRepository(UserEntity) // Agrega el repositorio del usuario
+    private readonly userRepository: Repository<UserEntity>
   ) {}
 
   async create(createConsultationDto: CreateConsultationDto): Promise<ConsultationEntity> {
-    const { professionalId, activityId, ...restDto } = createConsultationDto;
+    const { professionalId, activityId, userId, ...restDto } = createConsultationDto;
 
     const professional = await this.professionalRepository.findOne({
       where: {
@@ -37,10 +40,21 @@ export class ConsultationService {
     if (!activity) {
       throw new NotFoundException(`Activity with ID ${activityId} not found`);
     }
+
+    const user = await this.userRepository.findOne({
+      where: {
+        id: userId,
+      },
+    });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
     const consultation = this.consultationRepository.create({
       ...restDto,
       professional,
       activity,
+      user,
     });
 
     return await this.consultationRepository.save(consultation);

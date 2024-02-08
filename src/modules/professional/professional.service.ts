@@ -43,29 +43,23 @@ export class ProfessionalService {
       relations: ['professions'],
     });
 
+
     if (!professional) {
       throw new NotFoundException('Professional not found');
     }
+
     const professionIdsArray = Array.isArray(professionIds) ? professionIds : [professionIds];
-    const existingProfessions = professional.professions.filter((existingProfession) =>
-      professionIdsArray.includes(existingProfession.id)
+    const professions = await Promise.all(
+      professionIdsArray.map((id) => this.professionRepository.findOne({ where: { id } }))
     );
 
-    const newProfessionIds = professionIdsArray.filter(
-      (newProfessionId) => !existingProfessions.some((existingProfession) => existingProfession.id === newProfessionId)
-    );
-
-    if (newProfessionIds.length > 0) {
-      const newProfessions = await Promise.all(
-        newProfessionIds.map((id) => this.professionRepository.findOne({ where: { id } }))
-      );
-
-      professional.professions.push(...newProfessions);
-
-      return await this.professionalRepository.save(professional);
+    if (!professions.every(Boolean)) {
+      throw new NotFoundException('One or more professions not found');
     }
 
-    return professional;
+    professional.professions = professions;
+
+    return await this.professionalRepository.save(professional);
   }
 
   async login(loginProfessionalDto: LoginProfessionalDto) {
