@@ -12,7 +12,9 @@ export class ConsultationService {
   constructor(
     @InjectRepository(ConsultationEntity)
     private readonly consultationRepository: Repository<ConsultationEntity>,
+    @InjectRepository(ProfessionalEntity)
     private readonly professionalRepository: Repository<ProfessionalEntity>,
+    @InjectRepository(ActivityEntity)
     private readonly activityRepository: Repository<ActivityEntity>
   ) {}
 

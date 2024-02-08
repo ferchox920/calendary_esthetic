@@ -21,4 +21,8 @@ export class ConsultationEntity {
 
   @ManyToOne(() => ActivityEntity, (activity) => activity.consultations)
   activity: ActivityEntity;
+
+  constructor(partial: Partial<ConsultationEntity>) {
+    Object.assign(this, partial);
+  }
 }
