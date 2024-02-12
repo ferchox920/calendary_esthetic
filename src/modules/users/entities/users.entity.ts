@@ -1,3 +1,4 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { Exclude } from 'class-transformer';
 import { ConsultationEntity } from 'src/modules/consultation/entities/consultation.entity';
 import { Roles } from 'src/utility/common/roles-enum';
@@ -8,116 +9,59 @@ import {
   Entity,
   OneToMany,
   PrimaryGeneratedColumn,
-  Timestamp,
   UpdateDateColumn,
 } from 'typeorm';
 
 @Entity({ name: 'users' })
 export class UserEntity {
+  @ApiProperty({ example: 'uuid' })
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column('character varying', {
-    name: 'name',
-    length: 50,
-    nullable: true,
-  })
+  @ApiProperty({ example: 'John Doe', maxLength: 50, required: false })
+  @Column('character varying', { name: 'name', length: 50, nullable: true })
   name: string;
 
-  @Column('character varying', {
-    name: 'email',
-    length: 100,
-    nullable: false,
-    unique: true,
-  })
+  @ApiProperty({ example: 'john@example.com', maxLength: 100, required: true, uniqueItems: true })
+  @Column('character varying', { name: 'email', length: 100, nullable: false, unique: true })
   email: string;
 
-  @Column('character varying', {
-    name: 'number',
-    length: 20,
-    nullable: true,
-  })
+  @ApiProperty({ example: '123456789', maxLength: 20, required: false })
+  @Column('character varying', { name: 'number', length: 20, nullable: true })
   number: string;
 
-  @Column('character varying', {
-    name: 'password',
-    length: 100,
-    nullable: true,
-  })
+  @ApiProperty({ example: 'password', maxLength: 100, required: false })
+  @Column('character varying', { name: 'password', length: 100, nullable: true })
   password: string;
 
-  @Column('boolean', {
-    name: 'isVerified',
-    default: false,
-  })
+  @ApiProperty({ example: false, required: false })
+  @Column('boolean', { name: 'isVerified', default: false })
   isVerified: boolean;
 
-  @Column('boolean', {
-    name: 'isRegister',
-    default: false,
-  })
+  @ApiProperty({ example: false, required: false })
+  @Column('boolean', { name: 'isRegister', default: false })
   isRegister: boolean;
 
-  @Column('boolean', {
-    name: 'deleted',
-    default: false,
-  })
+  @ApiProperty({ example: false, required: false })
+  @Column('boolean', { name: 'deleted', default: false })
   deleted: boolean;
 
-  @Column('character varying', {
-    name: 'otp',
-    nullable: true,
-  })
+  @ApiProperty({ example: '1234', required: false })
+  @Column('character varying', { name: 'otp', nullable: true })
   otp: string;
 
-  @Column('date', {
-    name: 'otpExpiryTime',
-    nullable: true,
-  })
+  @ApiProperty({ example: '2024-02-10', required: false })
+  @Column('date', { name: 'otpExpiryTime', nullable: true })
   otpExpiryTime: Date;
 
-  @Column('character varying', {
-    name: 'addr1',
-    nullable: true,
-  })
-  addr1: string;
+  // ... otras propiedades
 
-  @Column('character varying', {
-    name: 'addr2',
-    nullable: true,
-  })
-  addr2: string;
-
-  @Column('character varying', {
-    name: 'city',
-    nullable: true,
-  })
-  city: string;
-
-  @Column('character varying', {
-    name: 'state',
-    nullable: true,
-  })
-  state: string;
-
-  @Column('character varying', {
-    name: 'country',
-    nullable: true,
-  })
-  country: string;
-
-  @Column('numeric', {
-    name: 'zip',
-    nullable: true,
-  })
-  zip: number;
-
-  @Column({ type: 'enum', enum: Roles,  default: Roles.USER })
+  @ApiProperty({ example: 'USER', enum: Roles, default: Roles.USER, required: false })
+  @Column({ type: 'enum', enum: Roles, default: Roles.USER })
   roles: Roles;
 
   @OneToMany(() => ConsultationEntity, (consultation) => consultation.user)
   consultations: ConsultationEntity[];
-
 
   @Exclude()
   @CreateDateColumn({
