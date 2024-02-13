@@ -1,6 +1,9 @@
+// user.entity.ts
+
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude } from 'class-transformer';
 import { ConsultationEntity } from 'src/modules/consultation/entities/consultation.entity';
+import { ReviewEntity } from 'src/modules/review/entities/review.entity'; // Asegúrate de importar la entidad ReviewEntity
 import { Roles } from 'src/utility/common/roles-enum';
 import {
   Column,
@@ -62,6 +65,9 @@ export class UserEntity {
 
   @OneToMany(() => ConsultationEntity, (consultation) => consultation.user)
   consultations: ConsultationEntity[];
+
+  @OneToMany(() => ReviewEntity, (review) => review.user) // Relación con la entidad ReviewEntity
+  reviews: ReviewEntity[]; // Propiedad para almacenar las revisiones del usuario
 
   @Exclude()
   @CreateDateColumn({

@@ -1,9 +1,12 @@
+// consultation.entity.ts
+
 import { ApiProperty } from '@nestjs/swagger';
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, OneToMany } from 'typeorm';
 import { ProfessionalEntity } from 'src/modules/professional/entities/professional.entity';
 import { ActivityEntity } from 'src/modules/activity/entities/activity.entity';
 import { UserEntity } from 'src/modules/users/entities/users.entity';
 import { ConsultStatusEnum } from 'src/utility/common/consult-status.enum';
+import { ReviewEntity } from 'src/modules/review/entities/review.entity'; // Asegúrate de importar la entidad ReviewEntity
 
 @Entity({ name: 'consultation' })
 export class ConsultationEntity {
@@ -34,6 +37,10 @@ export class ConsultationEntity {
   @ApiProperty({ type: () => UserEntity, required: false })
   @ManyToOne(() => UserEntity, (user) => user.consultations)
   user: UserEntity;
+
+  @ApiProperty({ type: () => [ReviewEntity], required: false }) // Relación con ReviewEntity
+  @OneToMany(() => ReviewEntity, (review) => review.consultation)
+  reviews: ReviewEntity[]; // Propiedad para almacenar las revisiones asociadas a esta consulta
 
   constructor(partial: Partial<ConsultationEntity>) {
     Object.assign(this, partial);

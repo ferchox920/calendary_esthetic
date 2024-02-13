@@ -8,6 +8,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { ProfessionModule } from './modules/profession/profession.module';
 import { ActivityModule } from './modules/activity/activity.module';
 import { ConsultationModule } from './modules/consultation/consultation.module';
+import { ReviewModule } from './modules/review/review.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { ConsultationModule } from './modules/consultation/consultation.module';
     ProfessionModule,
     ActivityModule,
     ConsultationModule,
+    ReviewModule,
   ],
   controllers: [],
   providers: [],

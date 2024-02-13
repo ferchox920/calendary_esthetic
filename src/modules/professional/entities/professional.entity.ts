@@ -1,3 +1,5 @@
+// professional.entity.ts
+
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude } from 'class-transformer';
 import { ConsultationEntity } from 'src/modules/consultation/entities/consultation.entity';
@@ -5,6 +7,7 @@ import { ProfessionEntity } from 'src/modules/profession/entities/profession.ent
 import { ProfesionalStatus } from 'src/utility/common/professional-status.enum';
 import { Roles } from 'src/utility/common/roles-enum';
 import { Entity, Column, PrimaryGeneratedColumn, UpdateDateColumn, CreateDateColumn, DeleteDateColumn, ManyToOne, JoinColumn, ManyToMany, JoinTable, OneToMany } from 'typeorm';
+import { ReviewEntity } from 'src/modules/review/entities/review.entity'; // Asegúrate de importar la entidad ReviewEntity
 
 @Entity({ name: 'professional' })
 export class ProfessionalEntity {
@@ -58,6 +61,9 @@ export class ProfessionalEntity {
 
   @OneToMany(() => ConsultationEntity, consultation => consultation.professional)
   consultations: ConsultationEntity[];
+
+  @OneToMany(() => ReviewEntity, (review) => review.professional) // Relación con ReviewEntity
+  reviews: ReviewEntity[]; // Propiedad para almacenar las revisiones asociadas a este profesional
 
   @Exclude()
   @CreateDateColumn({
