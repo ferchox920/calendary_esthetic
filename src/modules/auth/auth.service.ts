@@ -115,9 +115,9 @@ export class AuthService {
     let payload = { email, password, type}
     switch (type) {
       case Roles.USER:
-      //   return await this.usersService.login(payload);
-      // case Roles.ADMIN:
-      //   return await this.adminService.login(payload);
+        return await this.usersService.login(payload);
+      case Roles.ADMIN:
+        return await this.adminService.login(payload);
       case Roles.PROFESSIONAL:
         return await this.professionalService.login(payload);
     }

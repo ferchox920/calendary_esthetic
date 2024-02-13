@@ -6,6 +6,7 @@ import { Roles } from 'src/utility/common/roles-enum';
 import { AuthorizeGuard } from '../auth/guards/authorization.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
+import { AddProfessionsDto } from './dto/add-Professions.dto';
 
 @ApiTags('Professional')
 @ApiBearerAuth()
@@ -32,18 +33,17 @@ export class ProfessionalController {
 
   @ApiOperation({ summary: 'Add professions to a professional' })
   @ApiParam({ name: 'id', description: 'Professional ID', type: 'string' })
-  @ApiBody({ type: () => ({ professionIds: [String] }) })
+  @ApiBody({ type: AddProfessionsDto })
   @ApiResponse({ status: 200, description: 'Professions added successfully' })
   @UseGuards(JwtAuthGuard, AuthorizeGuard([Roles.ADMIN]))
   @Post(':id/professions')
   async addProfessionsToProfessional(
     @Param('id') id: string,
-    @Body() body: { professionIds: string[] }
+    @Body() addProfessionsDto: AddProfessionsDto
   ): Promise<any> {
-    const { professionIds } = body;
+    const { professionIds } = addProfessionsDto;
     return this.professionalService.addProfessionsToProfessional(id, professionIds);
   }
-  
   
 
   @ApiOperation({ summary: 'Get a professional by ID' })

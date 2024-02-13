@@ -8,8 +8,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { ProfessionModule } from './modules/profession/profession.module';
 import { ActivityModule } from './modules/activity/activity.module';
 import { ConsultationModule } from './modules/consultation/consultation.module';
-import { OrdersModule } from './modules/orders/orders.module';
-
+import { ReviewModule } from './modules/review/review.module';
 
 @Module({
   imports: [
@@ -22,7 +21,7 @@ import { OrdersModule } from './modules/orders/orders.module';
     ProfessionModule,
     ActivityModule,
     ConsultationModule,
-    OrdersModule,
+    ReviewModule,
   ],
   controllers: [],
   providers: [],

@@ -12,7 +12,7 @@ import { ConfirmEmailData } from '../email/interface';
 import { JwtService } from '@nestjs/jwt';
 import { Roles } from 'src/utility/common/roles-enum';
 import { TokenTypes } from 'src/utility/common/token-types.enum';
-
+import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class UsersService {
@@ -135,23 +135,21 @@ export class UsersService {
       isRegister: true,
     });
 
-
-
     const credential = {
-      access_token: this.generateAccessToken( {
+      access_token: this.generateAccessToken({
         userType: Roles.USER,
         type: TokenTypes.ACCESS,
         email: createdUser.email,
         id: createdUser.id,
         roles: createdUser.roles,
       }),
-      refresh_token:this.generateRefreshToken( {
+      refresh_token: this.generateRefreshToken({
         userType: Roles.USER,
         type: TokenTypes.REFRESH,
         email: createdUser.email,
         id: createdUser.id,
         roles: createdUser.roles,
-      })
+      }),
     };
 
     const { password: _, ...savedUser } = createdUser;
@@ -168,7 +166,8 @@ export class UsersService {
     return user;
   }
 
-  async login(email: string, password: string): Promise<UserEntity> {
+  async login(loginDto: LoginDto): Promise<UserEntity> {
+    const { email, password } = loginDto;
     const userExisting = await this.userRepository
       .createQueryBuilder('users')
       .addSelect('users.password')
