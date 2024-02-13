@@ -1,12 +1,13 @@
 // create-consultation.dto.ts
-import { IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import { IsNotEmpty, IsString, IsUUID, IsEnum } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { ConsultStatusEnum } from 'src/utility/common/consult-status.enum';
 
 export class CreateConsultationDto {
-  @ApiProperty({ description: 'Status of the consultation', example: 'Scheduled' })
+  @ApiProperty({ description: 'Status of the consultation', example: 'Scheduled', enum: ConsultStatusEnum })
   @IsNotEmpty({ message: 'Status is required' })
-  @IsString({ message: 'Status must be a string' })
-  status: string;
+  @IsEnum(ConsultStatusEnum, { message: 'Invalid status' })
+  status: ConsultStatusEnum;
 
   @ApiProperty({ description: 'Date of the consultation', example: '2024-02-10T08:00:00Z' })
   @IsNotEmpty({ message: 'Date is required' })
@@ -26,4 +27,9 @@ export class CreateConsultationDto {
   @IsNotEmpty({ message: 'Activity ID is required' })
   @IsUUID('4', { message: 'Invalid activity ID' })
   activityId: string;
+
+  @ApiProperty({ description: 'ID of the user associated with the consultation' })
+  @IsNotEmpty({ message: 'User ID is required' })
+  @IsUUID('4', { message: 'Invalid user ID' })
+  userId: string;
 }

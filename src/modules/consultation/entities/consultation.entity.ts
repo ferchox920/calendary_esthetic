@@ -3,6 +3,7 @@ import { Entity, Column, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
 import { ProfessionalEntity } from 'src/modules/professional/entities/professional.entity';
 import { ActivityEntity } from 'src/modules/activity/entities/activity.entity';
 import { UserEntity } from 'src/modules/users/entities/users.entity';
+import { ConsultStatusEnum } from 'src/utility/common/consult-status.enum';
 
 @Entity({ name: 'consultation' })
 export class ConsultationEntity {
@@ -10,9 +11,9 @@ export class ConsultationEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ApiProperty({ example: 'Scheduled', required: true })
-  @Column()
-  status: string;
+  @ApiProperty({ example: 'Scheduled', enum: ConsultStatusEnum, required: true })
+  @Column({ type: 'enum', enum: ConsultStatusEnum, default: ConsultStatusEnum.SCHEDULED })
+  status: ConsultStatusEnum;
 
   @ApiProperty({ example: '2024-02-10T08:00:00', required: true })
   @Column()

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConsultationEntity } from './entities/consultation.entity';
@@ -6,6 +6,8 @@ import { CreateConsultationDto } from './dto/create-consultation.dto';
 import { UpdateConsultationDto } from './dto/update-consultation.dto';
 import { ProfessionalEntity } from '../professional/entities/professional.entity';
 import { ActivityEntity } from '../activity/entities/activity.entity';
+import { UserEntity } from '../users/entities/users.entity';
+import { ConsultStatusEnum } from 'src/utility/common/consult-status.enum';
 
 @Injectable()
 export class ConsultationService {
@@ -15,32 +17,63 @@ export class ConsultationService {
     @InjectRepository(ProfessionalEntity)
     private readonly professionalRepository: Repository<ProfessionalEntity>,
     @InjectRepository(ActivityEntity)
-    private readonly activityRepository: Repository<ActivityEntity>
+    private readonly activityRepository: Repository<ActivityEntity>,
+    @InjectRepository(UserEntity)
+    private readonly userRepository: Repository<UserEntity>
   ) {}
 
   async create(createConsultationDto: CreateConsultationDto): Promise<ConsultationEntity> {
-    const { professionalId, activityId, ...restDto } = createConsultationDto;
+    const { professionalId, activityId, userId, date, ...restDto } = createConsultationDto;
 
     const professional = await this.professionalRepository.findOne({
       where: {
         id: professionalId,
       },
+      relations: ['consultations'],
     });
+
     if (!professional) {
       throw new NotFoundException(`Professional with ID ${professionalId} not found`);
     }
-    const activity = await this.activityRepository.findOne({
+
+    const user = await this.userRepository.findOne({
       where: {
-        id: activityId,
+        id: userId,
       },
+      relations: ['consultations'],
     });
-    if (!activity) {
-      throw new NotFoundException(`Activity with ID ${activityId} not found`);
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
     }
+
+    // Verificar si hay solapamiento de horarios para el profesional
+    const isProfessionalScheduleOccupied = professional.consultations.some((consultation) => {
+      return consultation.date === date && consultation.status !== ConsultStatusEnum.CANCELED;
+    });
+
+    if (isProfessionalScheduleOccupied) {
+      throw new BadRequestException('Professional schedule is already occupied at the specified time');
+    }
+
+    // Verificar si hay solapamiento de horarios para el usuario
+    const isUserScheduleOccupied = user.consultations.some((consultation) => {
+      return consultation.date === date && consultation.status !== ConsultStatusEnum.CANCELED;
+    });
+
+    if (isUserScheduleOccupied) {
+      throw new BadRequestException('User schedule is already occupied at the specified time');
+    }
+
+    // Resto de tu código para crear la consulta
+    // ...
+
     const consultation = this.consultationRepository.create({
       ...restDto,
+      date,
       professional,
-      activity,
+      activity: activityId ? { id: activityId } : null,
+      user,
     });
 
     return await this.consultationRepository.save(consultation);
