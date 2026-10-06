@@ -1,88 +1,44 @@
-import {
-  Controller,
-  ClassSerializerInterceptor,
-  Get,
-  Post,
-  HttpException,
-  HttpStatus,
-  UseGuards,
-  UseInterceptors,
-  Req,
-} from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, Req, Res } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
-import { LocalAuthGuard } from 'src/modules/auth/guards/local-auth.guard';
+import { OwnerLoginDto } from './dto/owner-login.dto';
+import { Public } from './public.decorator';
 import { JwtPayload } from './interface/jwt-payload.interface';
-import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
-import { LoginDto } from '../users/dto/login.dto';
+import { authConfig } from './auth-config';
 
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @ApiOperation({ summary: 'User login' })
-  @ApiBody({ type: LoginDto })
-  @ApiResponse({
-    status: 200,
-    description: 'Login successful',
-
-  })
-  @UseGuards(LocalAuthGuard)
-  @UseInterceptors(ClassSerializerInterceptor)
+  @Public()
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Ingresar a la agenda de Gabriela' })
   @Post('login')
-  async login(@Req() req: Request & { user: JwtPayload }) {
-    try {
-      const result = await this.authService.login(req.user);
-      return result;
-    } catch (ex: any) {
-      throw new HttpException(ex.message, HttpStatus.BAD_REQUEST);
-    }
+  async login(@Body() dto: OwnerLoginDto, @Res({ passthrough: true }) res: Response) {
+    const result = await this.authService.login(dto);
+    const config = authConfig();
+    res.setHeader('Cache-Control', 'no-store');
+    res.cookie(config.cookieName, result.credential.access_token, {
+      ...config.cookie,
+      maxAge: config.seconds * 1000,
+    });
+    return result;
   }
 
-  @ApiOperation({ summary: 'Get user profile' })
-  @ApiBearerAuth() // Secure the endpoint with JWT authorization
-  @ApiResponse({
-    status: 200,
-    description: 'Return user profile',
-
-  })
-  @UseGuards(JwtAuthGuard)
-  @UseInterceptors(ClassSerializerInterceptor)
+  @ApiBearerAuth()
   @Get('profile')
-  async getProfile(@Req() req: Request & { user: JwtPayload }) {
-    try {
-      const result = await this.authService.getProfile(req.user.id);
-      return result;
-    } catch (ex: any) {
-      throw new HttpException(ex.message, HttpStatus.BAD_REQUEST);
-    }
+  profile(@Req() req: Request & { user: JwtPayload }) {
+    return this.authService.getProfile(req.user.id);
   }
 
-  // Uncomment this section if you want to document the refreshToken endpoint
-  /*
-  @ApiOperation({ summary: 'Refresh user token' })
-  @ApiBearerAuth() // Secure the endpoint with JWT authorization
-  @ApiResponse({
-    status: 200,
-    description: 'Token refreshed successfully',
-    type: JwtPayload,
-  })
-  @UseGuards(JwtAuthGuard, SignatureGuard)
-  @UseInterceptors(ClassSerializerInterceptor)
-  @Get('refreshToken')
-  async refreshToken(
-    @Req()
-    req: Request & {
-      user: JwtPayload;
-    }
-  ) {
-    try {
-      const user = await this.authService.refreshToken(req.user.id);
-      return user;
-    } catch (ex: any) {
-      throw new HttpException(ex.message, HttpStatus.BAD_REQUEST);
-    }
+  @ApiBearerAuth()
+  @HttpCode(204)
+  @Post('logout')
+  async logout(@Req() req: Request & { user: JwtPayload }, @Res({ passthrough: true }) res: Response) {
+    await this.authService.logout(req.user);
+    const config = authConfig();
+    res.clearCookie(config.cookieName, config.cookie);
   }
-  */
 }

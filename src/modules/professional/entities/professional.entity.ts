@@ -6,7 +6,19 @@ import { ConsultationEntity } from 'src/modules/consultation/entities/consultati
 import { ProfessionEntity } from 'src/modules/profession/entities/profession.entity';
 import { ProfesionalStatus } from 'src/utility/common/professional-status.enum';
 import { Roles } from 'src/utility/common/roles-enum';
-import { Entity, Column, PrimaryGeneratedColumn, UpdateDateColumn, CreateDateColumn, DeleteDateColumn, ManyToOne, JoinColumn, ManyToMany, JoinTable, OneToMany } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+  CreateDateColumn,
+  DeleteDateColumn,
+  ManyToOne,
+  JoinColumn,
+  ManyToMany,
+  JoinTable,
+  OneToMany,
+} from 'typeorm';
 import { ReviewEntity } from 'src/modules/review/entities/review.entity'; // Asegúrate de importar la entidad ReviewEntity
 
 @Entity({ name: 'professional' })
@@ -40,7 +52,8 @@ export class ProfessionalEntity {
   description: string;
 
   @ApiProperty({ example: 'password', required: false })
-  @Column()
+  @Exclude()
+  @Column({ select: false })
   password: string;
 
   @ApiProperty({ example: 1, required: false })
@@ -59,7 +72,7 @@ export class ProfessionalEntity {
   })
   state: ProfesionalStatus;
 
-  @OneToMany(() => ConsultationEntity, consultation => consultation.professional)
+  @OneToMany(() => ConsultationEntity, (consultation) => consultation.professional)
   consultations: ConsultationEntity[];
 
   @OneToMany(() => ReviewEntity, (review) => review.professional) // Relación con ReviewEntity

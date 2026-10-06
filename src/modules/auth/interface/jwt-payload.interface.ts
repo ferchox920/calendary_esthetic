@@ -1,7 +1,5 @@
-import { Roles } from "src/utility/common/roles-enum";
-import { TokenTypes } from "src/utility/common/token-types.enum";
-
-
+import { Roles } from '../../../utility/common/roles-enum';
+import { TokenTypes } from '../../../utility/common/token-types.enum';
 
 export interface JwtPayload {
   userType: Roles;
@@ -9,4 +7,5 @@ export interface JwtPayload {
   email: string;
   id: string;
   roles: Roles;
+  sessionVersion: number;
 }

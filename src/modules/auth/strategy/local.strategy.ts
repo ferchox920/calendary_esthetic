@@ -1,31 +1,17 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-local';
 import { AuthService } from '../auth.service';
 
-
+// Kept for Passport consumers; HTTP login uses the validated OwnerLoginDto.
 @Injectable()
 export class LocalStrategy extends PassportStrategy(Strategy) {
-  constructor(private authService: AuthService) {
-    super({
-      usernameField: 'email',
-      passwordField: 'password',
-      passReqToCallback: true,
-    });
+  constructor(private readonly auth: AuthService) {
+    super({ usernameField: 'email', passwordField: 'password' });
   }
 
-  async validate(req: any, email: string, password: string): Promise<unknown> {
-    let type = req.body.type;
-
-
-
-  //TODO: logica de validacion de admin
-    
-    const user = await this.authService.validate(email, password, type);
-    if (!user) {
-      throw new HttpException('Usuario o Email Incorrecto!', HttpStatus.UNAUTHORIZED);
-    }
-    delete user.password;
-    return user;
+  async validate(email: string, password: string) {
+    const owner = await this.auth.validateCredentials(email, password);
+    return { id: owner.id, email: owner.email, name: owner.name };
   }
 }

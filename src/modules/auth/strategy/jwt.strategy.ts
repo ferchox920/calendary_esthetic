@@ -1,61 +1,52 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { OwnerAccount } from '../entities/owner-account.entity';
+import { authConfig } from '../auth-config';
+import { TokenTypes } from '../../../utility/common/token-types.enum';
+import { Roles } from '../../../utility/common/roles-enum';
 import { JwtPayload } from '../interface/jwt-payload.interface';
-import { UsersService } from 'src/modules/users/users.service';
-import { AdminService } from 'src/modules/admin/admin.service';
-import { Roles } from 'src/utility/common/roles-enum';
-import { ProfessionalService } from 'src/modules/professional/professional.service';
+import { isUUID } from 'class-validator';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(
-    private usersService: UsersService,
-    private adminServices: AdminService,
-    private professionalService: ProfessionalService
-  ) {
+  constructor(@InjectRepository(OwnerAccount) private readonly owners: Repository<OwnerAccount>) {
+    const config = authConfig();
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+        (req) => req?.cookies?.[config.cookieName] || null,
+      ]),
+      secretOrKey: config.jwt.secret,
       ignoreExpiration: false,
-      secretOrKey: process.env.ACCESS_TOKEN_SECRET_KEY,
+      algorithms: ['HS256'],
+      issuer: config.jwt.signOptions.issuer,
+      audience: config.jwt.signOptions.audience,
     });
   }
 
-  async validate(payload: JwtPayload): Promise<unknown> {
-    let user;
-
-
-    switch (payload.userType) {
-      case Roles.USER:
-        user = await this.usersService.findById(payload.id);
-
-        break;
-
-      case Roles.ADMIN:
-        user = await this.adminServices.findOne(payload.id);
-        break;
-      case Roles.PROFESSIONAL:
-        user = await this.professionalService.findOne(payload.id);
-        break;
+  async validate(payload: any): Promise<JwtPayload> {
+    if (
+      payload.type !== TokenTypes.ACCESS ||
+      !isUUID(payload.sub) ||
+      !Number.isInteger(payload.exp) ||
+      !Number.isInteger(payload.sessionVersion) ||
+      payload.sessionVersion < 1
+    ) {
+      throw new UnauthorizedException();
     }
-
-    if (user) {
- 
-      return {
-        userType: payload.userType,
-        type: payload.type,
-        id: payload.id,
-        roles: payload.roles,
-        email: user.email,
-        user: user,
-      };
-    } else
-      throw new HttpException(
-        {
-          statusCode: HttpStatus.UNAUTHORIZED,
-          message: 'Bad token',
-        },
-        HttpStatus.UNAUTHORIZED
-      );
+    if (payload.scope !== 'owner' || payload.roles !== Roles.ADMIN) throw new ForbiddenException();
+    const owner = await this.owners.findOneBy({ id: payload.sub, active: true });
+    if (!owner || owner.sessionVersion !== payload.sessionVersion) throw new UnauthorizedException();
+    return {
+      id: owner.id,
+      email: owner.email,
+      roles: Roles.ADMIN,
+      userType: Roles.ADMIN,
+      type: TokenTypes.ACCESS,
+      sessionVersion: owner.sessionVersion,
+    };
   }
 }

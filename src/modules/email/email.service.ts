@@ -1,5 +1,5 @@
 import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
-import nodemailer, { Transporter } from 'nodemailer';
+import nodemailer, { SendMailOptions, Transporter } from 'nodemailer';
 import SendmailTransport from 'nodemailer/lib/sendmail-transport';
 import { EmailModuleOptions } from './email.module';
 import { SendEmailConfig } from './interface';
@@ -34,11 +34,14 @@ export class EmailService {
   }
 
   async sendEmail<T>(sendEmailConfig: SendEmailConfig<T>, key: string) {
+    const mode = process.env.EMAIL_MODE || 'smtp';
+    if (!['disabled', 'smtp'].includes(mode)) throw new Error('EMAIL_MODE must be disabled or smtp');
+    if (mode === 'disabled') return { skipped: true };
     try {
       const config = this.options.find((config) => config.key === key);
       if (!config) throw new HttpException(`Key no encontrada: ${key}`, HttpStatus.NOT_FOUND);
       const html = await this.getTemplate(sendEmailConfig.template, sendEmailConfig.data);
-      const mailOptions: nodemailer.SendMailOptions = {
+      const mailOptions: SendMailOptions = {
         from: config.emailNodemail,
         to: sendEmailConfig.to,
         subject: sendEmailConfig.subject,
@@ -52,7 +55,10 @@ export class EmailService {
       console.log('Message sent: %s', info.messageId);
       return info;
     } catch (error) {
-      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        error instanceof Error ? error.message : String(error),
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
     }
   }
 

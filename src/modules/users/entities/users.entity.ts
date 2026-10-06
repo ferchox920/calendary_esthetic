@@ -34,7 +34,8 @@ export class UserEntity {
   number: string;
 
   @ApiProperty({ example: 'password', maxLength: 100, required: false })
-  @Column('character varying', { name: 'password', length: 100, nullable: true })
+  @Exclude()
+  @Column('character varying', { name: 'password', length: 100, nullable: true, select: false })
   password: string;
 
   @ApiProperty({ example: false, required: false })
@@ -50,11 +51,13 @@ export class UserEntity {
   deleted: boolean;
 
   @ApiProperty({ example: '1234', required: false })
-  @Column('character varying', { name: 'otp', nullable: true })
+  @Exclude()
+  @Column('character varying', { name: 'otp', nullable: true, select: false })
   otp: string;
 
   @ApiProperty({ example: '2024-02-10', required: false })
-  @Column('date', { name: 'otpExpiryTime', nullable: true })
+  @Exclude()
+  @Column('date', { name: 'otpExpiryTime', nullable: true, select: false })
   otpExpiryTime: Date;
 
   // ... otras propiedades

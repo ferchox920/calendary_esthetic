@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Build, types and PostgreSQL tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      NODE_ENV: test
+      HOST: 127.0.0.1
+      PORT: '3000'
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: '5546'
+      POSTGRES_USER: calendary_ci
+      # Disposable credentials used exclusively in this runner's service container.
+      POSTGRES_PASSWORD: fictitious-ci-postgres-password
+      POSTGRES_DATABASE: calendary_esthetic_dev
+      POSTGRES_SCHEMA: public
+      POSTGRES_SSL: 'false'
+      JWT_SECRET: fictitious-ci-jwt-secret-with-at-least-32-bytes
+      JWT_EXPIRATION_TIME: 1h
+      APP_ORIGIN: http://127.0.0.1:3000
+      EMAIL_MODE: disabled
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: calendary_ci
+          POSTGRES_PASSWORD: fictitious-ci-postgres-password
+          POSTGRES_DB: calendary_esthetic_dev
+        ports:
+          - 5546:5432
+        options: >-
+          --health-cmd "pg_isready -U calendary_ci -d calendary_esthetic_dev"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Set up npm
+        run: npm install --global npm@11.6.2
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Build
+        run: npm run build
+      - name: Validate TypeScript
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm test
+      - name: Apply migrations to the empty CI database
+        run: node node_modules/typeorm/cli.js -d dist/db/data-source.js migration:run
+      - name: Verify PostgreSQL migrations and transaction rollback
+        run: node scripts/check-db.cjs
+      - name: HTTP integration tests with PostgreSQL
+        run: npm run test:e2e

@@ -1,134 +1,66 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { JwtService, JwtSignOptions } from '@nestjs/jwt';
-
-import { ConfigService } from '@nestjs/config';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-
-import { AdminService } from '../admin/admin.service';
-import { UserEntity } from '../users/entities/users.entity';
-import { AdminEntity } from '../admin/entities/admin.entity';
-import { Roles } from 'src/utility/common/roles-enum';
-import { TokenTypes } from 'src/utility/common/token-types.enum';
-import { UsersService } from '../users/users.service';
+import * as bcrypt from 'bcrypt';
+import { OwnerAccount } from './entities/owner-account.entity';
+import { OwnerLoginDto } from './dto/owner-login.dto';
+import { TokenTypes } from '../../utility/common/token-types.enum';
+import { Roles } from '../../utility/common/roles-enum';
 import { JwtPayload } from './interface/jwt-payload.interface';
-import { ProfessionalEntity } from '../professional/entities/professional.entity';
-import { ProfessionalService } from '../professional/professional.service';
 
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectRepository(UserEntity)
-    private readonly userRepository: Repository<UserEntity>,
-    @InjectRepository(AdminEntity)
-    private readonly adminRepository: Repository<AdminEntity>,
-    @InjectRepository(ProfessionalEntity)
-    private readonly professionalRepository: Repository<ProfessionalEntity>,
-    private readonly usersService: UsersService,
-    private readonly adminService: AdminService,
-    private readonly professionalService: ProfessionalService,
-    private readonly jwtService: JwtService,
-    private config: ConfigService
+    @InjectRepository(OwnerAccount) private readonly owners: Repository<OwnerAccount>,
+    private readonly jwt: JwtService
   ) {}
 
-  async login(user: JwtPayload) {
-    let profile: UserEntity | AdminEntity;
-
-    switch (user.roles) {
-      case Roles.USER:
-        profile = await this.userRepository.findOne({ where: { id: user.id } });
-        break;
-
-      case Roles.ADMIN:
-        profile = await this.adminRepository.findOne({
-          where: { id: user.id },
-        });
-        break;
-      case Roles.PROFESSIONAL:
-        profile = await this.professionalRepository.findOne({
-          where: { id: user.id },
-        });
-        break;
-
-      default:
-        throw new Error('Invalid role');
+  async validateCredentials(email: string, password: string) {
+    if (typeof email !== 'string' || typeof password !== 'string' || Buffer.byteLength(password) > 72) {
+      throw new UnauthorizedException('Credenciales inválidas');
     }
-
-    const credential = await this.authGenericResponse(user);
-
-    return {
-      profile,
-      credential,
-    };
+    const owner = await this.owners
+      .createQueryBuilder('owner')
+      .addSelect('owner.passwordHash')
+      .where('owner.email = :email', { email: email.trim().toLowerCase() })
+      .getOne();
+    // Equal bcrypt work for unknown accounts; the hash is not a credential.
+    const hash = owner?.passwordHash || '$2b$12$R9h/cIPz0gi.URNNX3kh2OPST9/PgBkqquzi.Ss7KIUgO2t0jWMUW';
+    const matches = await bcrypt.compare(password, hash);
+    if (!owner?.active || !matches) throw new UnauthorizedException('Credenciales inválidas');
+    return owner;
   }
 
-  async authGenericResponse(user: JwtPayload | UserEntity | AdminEntity) {
+  async login(dto: OwnerLoginDto) {
+    const owner = await this.validateCredentials(dto.email, dto.password);
+    const access_token = this.jwt.sign({
+      sub: owner.id,
+      scope: 'owner',
+      type: TokenTypes.ACCESS,
+      sessionVersion: owner.sessionVersion,
+      roles: Roles.ADMIN,
+    });
+    const decoded = this.jwt.decode(access_token) as { exp: number };
     return {
-      access_token: this.generateToken(user, TokenTypes.ACCESS),
-      refresh_token: this.generateToken(user, TokenTypes.REFRESH, {
-        expiresIn: this.config.get('JWT_EXPIRATION_TIME_REFRESH'),
-      }),
-      expirationTime: this.calculateExpirationTime(),
-      id: user?.id,
-      email: user?.email,
-      roles: user?.roles,
+      profile: { id: owner.id, name: owner.name, email: owner.email },
+      credential: { access_token, expirationTime: new Date(decoded.exp * 1000).toISOString() },
     };
   }
 
   async getProfile(id: string) {
-    const user = await this.usersService.findById(id);
-    user.password;
-    return user;
-  }
-  private calculateExpirationTime() {
-    const expiresIn = this.config.get('JWT_EXPIRATION_TIME').replace(/[^\d.-]/g, '');
-    const timeNow = new Date();
-    const expirationTokenTime = new Date(timeNow.getTime() + +(1000 * parseInt(expiresIn)));
-    return expirationTokenTime;
+    const owner = await this.owners.findOneBy({ id, active: true });
+    if (!owner) throw new UnauthorizedException();
+    return { id: owner.id, name: owner.name, email: owner.email };
   }
 
-  private generateToken(
-    user: JwtPayload | UserEntity | AdminEntity,
-    type: TokenTypes,
-    config?: {
-      secret?: string;
-      expiresIn?: string;
-    }
-  ) {
-    const commonPayload: Object = {
-      userType: user.roles,
-      type: type,
-      email: user.email,
-      id: user.id,
-      roles: user.roles,
-    };
-
-    const options: JwtSignOptions = {
-      expiresIn: config?.expiresIn || this.config.get('JWT_EXPIRATION_TIME'),
-      secret: config?.secret || this.config.get('JWT_SECRET'),
-    };
-
-    return this.jwtService.sign(commonPayload, options);
-  }
-
-  async validate(email: string, password: string, type: string): Promise<any> {
-    let payload = { email, password, type}
-    switch (type) {
-      case Roles.USER:
-        return await this.usersService.login(payload);
-      case Roles.ADMIN:
-        return await this.adminService.login(payload);
-      case Roles.PROFESSIONAL:
-        return await this.professionalService.login(payload);
-    }
-    throw new HttpException('Invalid credentials', HttpStatus.UNAUTHORIZED);
-  }
-
-  async refreshToken(userId: string) {
-    const user = await this.usersService.findById(userId);
-    if (!user) {
-      throw new HttpException('User not found', HttpStatus.BAD_REQUEST);
-    }
-    return this.authGenericResponse(user);
+  async logout(user: JwtPayload) {
+    // Logging out invalidates every existing session of the single owner.
+    await this.owners
+      .createQueryBuilder()
+      .update()
+      .set({ sessionVersion: () => '"sessionVersion" + 1' })
+      .where('id = :id AND "sessionVersion" = :version', { id: user.id, version: user.sessionVersion })
+      .execute();
   }
 }

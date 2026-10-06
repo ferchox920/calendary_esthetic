@@ -1,32 +1,39 @@
-import { ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
-import { TokenTypes } from '../../../utility/common/token-types.enum';
+import { ExtractJwt } from 'passport-jwt';
+import { PUBLIC_ROUTE } from '../public.decorator';
+import { authConfig } from '../auth-config';
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
-  request: any;
+  constructor(private readonly reflector: Reflector) {
+    super();
+  }
 
   canActivate(context: ExecutionContext) {
-    this.request = context.switchToHttp().getRequest();
-
+    const req = context.switchToHttp().getRequest();
+    const config = authConfig();
+    const origin = req.headers.origin;
+    if (origin && origin !== config.origin) throw new ForbiddenException('Origen no permitido');
+    const publicRoute = this.reflector.getAllAndOverride<boolean>(PUBLIC_ROUTE, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (publicRoute) return true;
+    const unsafe = !['GET', 'HEAD', 'OPTIONS'].includes(req.method);
+    const bearer = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
+    if (req.headers.authorization && !bearer) throw new UnauthorizedException();
+    // Browser cookie writes require the configured Origin. Bearer clients do not rely on cookies.
+    if (unsafe && !bearer && req.cookies?.[config.cookieName] && origin !== config.origin) {
+      throw new ForbiddenException('Origen requerido para modificar la agenda');
+    }
     return super.canActivate(context);
   }
 
-  handleRequest(err, user, info) {
-
-    let havePermission = false;
-
-    if (user.type === TokenTypes.CHANGEPASSWORD) {
-      havePermission = (this.request.url as string).indexOf('/auth/changePassword/') !== -1;
-    } else if (user.type === TokenTypes.REFRESH) {
-      havePermission = (this.request.url as string).indexOf('/auth/refreshToken/') !== -1;
-    }
-
-    if (user.type === TokenTypes.ACCESS || havePermission) {
-      return user;
-    }
-
-    console.log(err);
-    throw err || new UnauthorizedException(info ? info.message : '');
+  handleRequest(err, user) {
+    if (err) throw err;
+    if (!user) throw new UnauthorizedException();
+    return user;
   }
 }

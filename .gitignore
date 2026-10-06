@@ -3,6 +3,9 @@
 /node_modules
 /uploads
 .env
+.env.*
+!.env.example
+*.tsbuildinfo
 # Logs
 logs
 *.log
@@ -34,5 +37,3 @@ lerna-debug.log*
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
-
-package-lock.json

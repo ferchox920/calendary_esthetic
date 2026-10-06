@@ -26,7 +26,8 @@ export class AdminEntity {
   avatar: string;
 
   @ApiProperty({ example: 'password', required: false })
-  @Column()
+  @Exclude()
+  @Column({ select: false })
   password: string;
 
   @ApiProperty({ enum: Roles, default: Roles.ADMIN, required: false })
