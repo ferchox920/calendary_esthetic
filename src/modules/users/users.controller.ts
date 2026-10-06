@@ -12,11 +12,15 @@ import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nes
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @ApiOperation({ summary: 'Get all users' })
+  @ApiOperation({
+    summary: 'Listar usuarios',
+    description:
+      'Devuelve la lista de los usuarios. Requiere permisos de administrador.',
+  })
   @ApiBearerAuth() // Secure the endpoint with JWT authorization
   @ApiResponse({
     status: 200,
-    description: 'Return the list of all users',
+    description: 'Listado de los usuarios.',
     type: UserEntity,
     isArray: true,
   })
@@ -26,10 +30,14 @@ export class UsersController {
     return await this.usersService.findAll();
   }
 
-  @ApiOperation({ summary: 'Get a single user by ID' })
+  @ApiOperation({
+    summary: 'Consultar usuario por ID',
+    description:
+      'Devuelve los datos del usuario cuyo identificador se indica en la ruta.',
+  })
   @ApiResponse({
     status: 200,
-    description: 'Return the user with the specified ID',
+    description: 'Datos del registro solicitado.',
     type: UserEntity,
   })
   @Get('single/:id')
@@ -37,10 +45,14 @@ export class UsersController {
     return await this.usersService.findOneById(id);
   }
 
-  @ApiOperation({ summary: 'Update a user by ID' })
+  @ApiOperation({
+    summary: 'Actualizar usuario',
+    description:
+      'Actualiza los datos del usuario mediante su identificador y los valores enviados en el cuerpo de la solicitud.',
+  })
   @ApiResponse({
     status: 200,
-    description: 'User updated successfully',
+    description: 'Registro actualizado correctamente.',
     type: UserEntity,
   })
   @Patch(':id')
@@ -48,10 +60,14 @@ export class UsersController {
     return await this.usersService.update(id, updateUserDto);
   }
 
-  @ApiOperation({ summary: 'Delete a user by ID' })
+  @ApiOperation({
+    summary: 'Eliminar usuario',
+    description:
+      'Elimina el registro del usuario mediante el identificador indicado en la ruta.',
+  })
   @ApiResponse({
     status: 200,
-    description: 'User deleted successfully',
+    description: 'Registro eliminado correctamente.',
   })
   @Delete(':id')
   async remove(@Param('id') id: string) {

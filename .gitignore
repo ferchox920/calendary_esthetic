@@ -3,6 +3,8 @@
 /node_modules
 /uploads
 /docs
+/.local
+/tools/whatsapp-probe/node_modules
 .env
 .env.*
 !.env.example

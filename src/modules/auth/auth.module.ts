@@ -25,6 +25,6 @@ import { authConfig } from './auth-config';
     { provide: APP_GUARD, useExisting: JwtAuthGuard },
     { provide: APP_INTERCEPTOR, useClass: PrivateResponseInterceptor },
   ],
-  exports: [JwtAuthGuard],
+  exports: [JwtAuthGuard, AuthService],
 })
 export class AuthModule {}

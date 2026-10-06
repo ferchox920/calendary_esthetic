@@ -9,3 +9,7 @@ process.env.APP_ORIGIN = 'http://127.0.0.1:3000';
 process.env.JWT_SECRET = 'isolated-e2e-fictitious-secret-at-least-32-bytes';
 process.env.JWT_EXPIRATION_TIME = '1h';
 process.env.EMAIL_MODE = 'disabled';
+process.env.GOOGLE_ENABLED = 'false';
+process.env.GOOGLE_SYNC_WORKER_ENABLED = 'false';
+process.env.REMINDERS_WORKER_ENABLED = 'false';
+process.env.REMINDERS_PROVIDER = 'disabled';

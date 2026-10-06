@@ -1,7 +1,20 @@
 import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
 import { map } from 'rxjs/operators';
 
-const privateFields = new Set(['password', 'passwordHash', 'otp', 'otpExpiryTime', 'sessionVersion']);
+const privateFields = new Set([
+  'password',
+  'passwordHash',
+  'otp',
+  'otpExpiryTime',
+  'sessionVersion',
+  'refreshTokenEncrypted',
+  'refreshToken',
+  'verifierEncrypted',
+  'nonceHash',
+  'stateHash',
+  'lockToken',
+  'provisionToken',
+]);
 
 export function sanitizeResponse(value: any): any {
   if (Array.isArray(value)) return value.map(sanitizeResponse);

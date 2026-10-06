@@ -63,7 +63,7 @@ describe('Private owner access (real PostgreSQL)', () => {
     const document = SwaggerModule.createDocument(app, new DocumentBuilder().build());
     let checked = 0;
     for (const [path, methods] of Object.entries(document.paths)) {
-      if (path === '/api/v1/auth/login') continue;
+      if (['/api/v1/auth/login', '/api/v1/auth/google/start', '/api/v1/auth/google/callback'].includes(path)) continue;
       const concretePath = path.replace(/\{[^}]+\}/g, owner.id);
       for (const method of Object.keys(methods)) {
         if (!['get', 'post', 'patch', 'put', 'delete'].includes(method)) continue;

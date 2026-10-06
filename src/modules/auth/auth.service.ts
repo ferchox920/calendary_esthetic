@@ -34,6 +34,10 @@ export class AuthService {
 
   async login(dto: OwnerLoginDto) {
     const owner = await this.validateCredentials(dto.email, dto.password);
+    return this.issueSession(owner);
+  }
+
+  issueSession(owner: OwnerAccount) {
     const access_token = this.jwt.sign({
       sub: owner.id,
       scope: 'owner',

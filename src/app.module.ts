@@ -10,6 +10,9 @@ import { ProfessionModule } from './modules/profession/profession.module';
 import { ActivityModule } from './modules/activity/activity.module';
 import { ConsultationModule } from './modules/consultation/consultation.module';
 import { ReviewModule } from './modules/review/review.module';
+import { AgendaModule } from './modules/agenda/agenda.module';
+import { GoogleModule } from './modules/google/google.module';
+import { RemindersModule } from './modules/reminders/reminder.module';
 
 @Module({
   imports: [
@@ -24,6 +27,9 @@ import { ReviewModule } from './modules/review/review.module';
     ActivityModule,
     ConsultationModule,
     ReviewModule,
+    AgendaModule,
+    GoogleModule,
+    RemindersModule,
   ],
   controllers: [],
   providers: [],

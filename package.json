@@ -5,7 +5,10 @@
   "author": "",
   "private": true,
   "packageManager": "npm@11.6.2",
-  "engines": { "node": "24.19.x", "npm": "11.6.x" },
+  "engines": {
+    "node": "24.19.x",
+    "npm": "11.6.x"
+  },
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
@@ -14,6 +17,9 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/src/main.js",
+    "whatsapp:link:test": "node tools/whatsapp-probe/connect.mjs",
+    "whatsapp:link:code": "node tools/whatsapp-probe/connect.mjs --code",
+    "whatsapp:link:stop": "node tools/whatsapp-probe/stop.mjs",
     "db:up": "docker compose up -d --wait postgres",
     "db:stop": "docker compose stop postgres",
     "db:check": "npm run build && node scripts/check-db.cjs",
@@ -33,6 +39,7 @@
     "db:drop": "npm run typeorm schema:drop"
   },
   "dependencies": {
+    "@js-temporal/polyfill": "0.5.1",
     "@nestjs/common": "12.1.2",
     "@nestjs/config": "12.0.1",
     "@nestjs/core": "12.1.2",
@@ -50,6 +57,7 @@
     "cookie-parser": "^1.4.6",
     "crypto-js": "^4.2.0",
     "dotenv": "18.0.5",
+    "google-auth-library": "11.1.0",
     "handlebars": "^4.7.8",
     "jsonwebtoken": "9.0.3",
     "morgan": "^1.10.0",
@@ -90,13 +98,24 @@
     "typescript": "6.0.3"
   },
   "jest": {
-    "moduleFileExtensions": ["js", "json", "ts"],
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
-      "^.+\\.(t|j)s$": ["ts-jest", { "tsconfig": "<rootDir>/../tsconfig.spec.json" }]
+      "^.+\\.(t|j)s$": [
+        "ts-jest",
+        {
+          "tsconfig": "<rootDir>/../tsconfig.spec.json"
+        }
+      ]
     },
-    "collectCoverageFrom": ["**/*.(t|j)s"],
+    "collectCoverageFrom": [
+      "**/*.(t|j)s"
+    ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
   },

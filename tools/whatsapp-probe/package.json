@@ -1,0 +1,16 @@
+{
+  "name": "calendary-whatsapp-link-probe",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "engines": { "node": "24.19.x" },
+  "scripts": {
+    "start": "node connect.mjs",
+    "test": "node --test --test-concurrency=1"
+  },
+  "dependencies": {
+    "baileys": "7.0.0-rc14",
+    "pino": "10.4.0",
+    "qrcode": "1.5.4"
+  }
+}
