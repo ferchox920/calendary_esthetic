@@ -136,9 +136,11 @@ Credenciales locales ficticias: email `gabriela@example.test`; contraseña gener
 `OWNER_PASSWORD` del `.env` privado. Para probar con Swagger, ejecutar login y usar
 el `access_token` devuelto en Authorize. Nunca pegar credenciales en documentación o Git.
 Provisioning y recuperación son comandos administrativos; no hay registro público ni OTP.
-Procedimiento completo: [acceso privado y recuperación](docs/planificacion-gabriela/ETAPA-2-ACCESO.md).
-
-Historial de preparación: [primera entrega](docs/planificacion-gabriela/ETAPA-1.md).
+Para recuperación asistida, el responsable técnico verifica la identidad de Gabriela,
+configura `OWNER_EMAIL` con el email existente y suministra una contraseña nueva mediante
+`OWNER_PASSWORD`. Ejecutar `npm run owner:reset` cambia el hash, reactiva la cuenta y revoca
+todas las sesiones anteriores. Entregar la contraseña por un canal privado y comprobar
+el nuevo login, sin registrar credenciales en tickets ni logs.
 
 ## Integración continua (F1.5)
 
@@ -151,4 +153,3 @@ Las bases del runner son descartables. CI usa variables ficticias declaradas en 
 workflow, sin `.env`, SMTP ni credenciales de Gabriela. Las acciones están fijadas por
 SHA y el token del workflow tiene permiso de lectura. No ejecuta `lint --fix` ni despliega.
 Los fallos quedan visibles en la pestaña Actions del repositorio.
-Detalles: [entrega de CI](docs/planificacion-gabriela/ETAPA-3-CI.md).
