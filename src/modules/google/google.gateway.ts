@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { CodeChallengeMethod, OAuth2Client } from 'google-auth-library';
-import { CALENDAR_SCOPE, googleConfig } from './google-config';
+import { CALENDAR_SCOPE, CALENDAR_READ_SCOPES, googleConfig } from './google-config';
 
 export class GoogleProviderError extends Error {
   constructor(
@@ -26,7 +26,7 @@ export class GoogleGateway {
   authorizationUrl(state: string, nonce: string, challenge: string, calendar: boolean) {
     const url = new URL(
       this.client().generateAuthUrl({
-        scope: calendar ? ['openid', 'email', CALENDAR_SCOPE] : ['openid', 'email'],
+        scope: calendar ? ['openid', 'email', CALENDAR_SCOPE, ...CALENDAR_READ_SCOPES] : ['openid', 'email'],
         state,
         code_challenge: challenge,
         code_challenge_method: CodeChallengeMethod.S256,
@@ -118,6 +118,31 @@ export class GoogleGateway {
       description: 'Calendario gestionado desde la agenda de Gabriela.',
       timeZone: timezone,
     });
+  }
+
+  async listCalendars(refreshToken: string) {
+    const items: any[] = [];
+    let pageToken: string | undefined;
+    do {
+      const query = new URLSearchParams({ minAccessRole: 'reader', maxResults: '250' });
+      if (pageToken) query.set('pageToken', pageToken);
+      const page = await this.request(refreshToken, 'GET', `users/me/calendarList?${query}`);
+      if (!Array.isArray(page.items)) throw new GoogleProviderError(502, 'temporary');
+      items.push(...page.items.filter((c: any) => !c.deleted && typeof c.id === 'string'));
+      pageToken = page.nextPageToken;
+    } while (pageToken);
+    return items;
+  }
+
+  listEvents(refreshToken: string, calendarId: string, source: any) {
+    const query = new URLSearchParams({ singleEvents: 'true', showDeleted: 'true', maxResults: '250' });
+    if (source.syncToken) query.set('syncToken', source.syncToken);
+    else {
+      query.set('timeMin', new Date(source.rangeFrom).toISOString());
+      query.set('timeMax', new Date(source.rangeTo).toISOString());
+    }
+    if (source.pageToken) query.set('pageToken', source.pageToken);
+    return this.request(refreshToken, 'GET', `calendars/${encodeURIComponent(calendarId)}/events?${query}`);
   }
 
   async upsertEvent(refreshToken: string, calendarId: string, eventId: string, event: any) {

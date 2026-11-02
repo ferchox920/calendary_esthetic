@@ -7,7 +7,7 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { setupApp } from '../src/setup-app';
 import { manageOwner } from '../src/modules/auth/owner-management';
-import { CALENDAR_SCOPE } from '../src/modules/google/google-config';
+import { CALENDAR_SCOPE, CALENDAR_READ_SCOPES } from '../src/modules/google/google-config';
 import { decrypt, hash } from '../src/modules/google/google-crypto';
 import { GoogleGateway, GoogleProviderError } from '../src/modules/google/google.gateway';
 import { GoogleSyncService } from '../src/modules/google/google-sync.service';
@@ -171,7 +171,12 @@ describe('Google integration (real PostgreSQL, Google network substituted)', () 
 
   it('uses browser-bound state, nonce, PKCE and narrowly scoped offline calendar permission', async () => {
     const attempt = await begin();
-    expect(attempt.url.searchParams.get('scope').split(' ')).toEqual(['openid', 'email', CALENDAR_SCOPE]);
+    expect(attempt.url.searchParams.get('scope').split(' ')).toEqual([
+      'openid',
+      'email',
+      CALENDAR_SCOPE,
+      ...CALENDAR_READ_SCOPES,
+    ]);
     expect(attempt.url.searchParams.get('code_challenge_method')).toBe('S256');
     expect(attempt.url.searchParams.get('access_type')).toBe('offline');
     expect(attempt.response.headers['set-cookie'][0]).toContain('SameSite=Lax');
@@ -245,6 +250,31 @@ describe('Google integration (real PostgreSQL, Google network substituted)', () 
     const expired = await begin();
     await db.query(`UPDATE google_oauth_state SET "expiresAt"=now()-interval '1 minute'`);
     await callback(expired).expect(400);
+  });
+
+  it('enables reading an existing calendar without provisioning an export calendar for a new connection', async () => {
+    const attempt = await begin(true, { scopes: ['openid', 'email', CALENDAR_SCOPE, ...CALENDAR_READ_SCOPES] });
+    await callback(attempt).expect(200);
+    expect((await req('get', '/integrations/google').expect(200)).body).toMatchObject({
+      sourceReadEnabled: true,
+      calendarConnected: false,
+      source: null,
+    });
+    await sync.runOnce();
+    expect(fake.createCalendar).not.toHaveBeenCalled();
+    expect(fake.upsertEvent).not.toHaveBeenCalled();
+  });
+
+  it('returns the browser to the configured application origin after authorization', async () => {
+    const attempt = await begin();
+    const result = await request(app.getHttpServer())
+      .get('/api/v1/auth/google/callback')
+      .query({ state: attempt.state, code: attempt.code })
+      .set('Cookie', attempt.cookie)
+      .set('Accept', 'text/html')
+      .expect(303);
+    expect(result.headers.location).toBe('http://127.0.0.1:3000/?google=connected');
+    expect(result.headers.location).not.toContain(attempt.code);
   });
 
   it('rejects incorrect nonces, denied consent, insufficient scope and missing initial refresh tokens', async () => {

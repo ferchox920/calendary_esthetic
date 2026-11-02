@@ -75,6 +75,9 @@ export class ClientsProjectsService {
         AND e.kind='session' AND e."sessionStatus" IN ('pending','confirmed') AND e."endAt">now()`,
         [id]
       );
+      const imported = await m.query(`SELECT v.id,v."startAt",v."endAt" FROM google_agenda_entry v
+        WHERE ${kind === 'client' ? 'v."clientId"' : 'v."projectId"'}=$1 AND v."sessionStatus" IN ('pending','confirmed') AND v."endAt">now()`, [id]);
+      conflicts.push(...imported);
       if (conflicts.length)
         throw new ConflictException({
           message: 'Cancela o finaliza las sesiones pendientes antes de archivar',
@@ -128,6 +131,8 @@ export class ClientsProjectsService {
       const [project] = await m.query('SELECT * FROM tattoo_project WHERE id=$1', [id]);
       if (!project) throw new NotFoundException('Proyecto inexistente');
       const sessions = await m.query('SELECT * FROM schedule_entry WHERE "projectId"=$1 ORDER BY "startAt",id', [id]);
+      sessions.push(...await m.query('SELECT * FROM google_agenda_entry WHERE "projectId"=$1 ORDER BY "startAt",id', [id]));
+      sessions.sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
       return { ...project, sessions };
     });
   }

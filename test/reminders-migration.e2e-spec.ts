@@ -6,6 +6,7 @@ import { OwnerAccount1791298800000 } from '../db/migrations/1791298800000-owner-
 import { PrivateAgenda1791300000000 } from '../db/migrations/1791300000000-private-agenda';
 import { GoogleIntegration1791301200000 } from '../db/migrations/1791301200000-google-integration';
 import { Reminders1791302400000 } from '../db/migrations/1791302400000-reminders';
+import { ReminderReconciliation1791303600000 } from '../db/migrations/1791303600000-reminder-reconciliation';
 
 describe('Reminder migration (disposable PostgreSQL database)', () => {
   let admin: DataSource, fixture: DataSource;
@@ -87,5 +88,29 @@ describe('Reminder migration (disposable PostgreSQL database)', () => {
     await fixture.query(sql, values);
     await expect(fixture.query(sql, values)).rejects.toThrow();
     expect(await fixture.showMigrations()).toBe(false);
+  });
+  it('adds reconciliation metadata without changing previous attempts and rolls back only its column', async () => {
+    const [job] = await fixture.query('SELECT id FROM reminder_job LIMIT 1');
+    const [before] = await fixture.query(
+      `INSERT INTO reminder_attempt (id,"jobId",number,provider,"startedAt","finishedAt",outcome)
+      VALUES ($1,$2,1,'baileys',now(),now(),'uncertain') RETURNING *`,
+      [randomUUID(), job.id]
+    );
+    const runner = fixture.createQueryRunner(),
+      migration = new ReminderReconciliation1791303600000();
+    await runner.connect();
+    try {
+      await migration.up(runner);
+      expect((await fixture.query('SELECT * FROM reminder_attempt WHERE id=$1', [before.id]))[0]).toEqual({
+        ...before,
+        reconciledAt: null,
+      });
+      await fixture.query('UPDATE reminder_attempt SET "reconciledAt"=now() WHERE id=$1', [before.id]);
+      await migration.down(runner);
+      expect((await fixture.query('SELECT * FROM reminder_attempt WHERE id=$1', [before.id]))[0]).toEqual(before);
+      expect((await fixture.query('SELECT id FROM reminder_job WHERE id=$1', [job.id]))[0].id).toBe(job.id);
+    } finally {
+      await runner.release();
+    }
   });
 });

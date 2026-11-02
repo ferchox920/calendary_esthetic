@@ -145,7 +145,7 @@ export class ReminderService {
       j.state,j.attempts,j.reason,j.provider,j."providerMessageId",j."createdAt",j."updatedAt",
       count(*) OVER()::int AS "totalCount",coalesce((SELECT jsonb_agg(jsonb_build_object(
         'number',a.number,'provider',a.provider,'startedAt',a."startedAt",'finishedAt',a."finishedAt",
-        'outcome',a.outcome,'reason',a.reason) ORDER BY a.number) FROM reminder_attempt a WHERE a."jobId"=j.id),'[]'::jsonb) AS "attemptHistory"
+        'outcome',a.outcome,'reason',a.reason,'reconciledAt',a."reconciledAt") ORDER BY a.number) FROM reminder_attempt a WHERE a."jobId"=j.id),'[]'::jsonb) AS "attemptHistory"
       FROM reminder_job j WHERE ($1::uuid IS NULL OR j."entryId"=$1) AND ($2::text IS NULL OR j.state=$2)
       ORDER BY j."createdAt" DESC,j.id LIMIT $3 OFFSET $4`,
       [dto.entryId || null, dto.state || null, dto.limit, (dto.page - 1) * dto.limit]

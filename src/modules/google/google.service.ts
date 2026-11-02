@@ -4,7 +4,7 @@ import { DataSource, EntityManager } from 'typeorm';
 import { AuthService } from '../auth/auth.service';
 import { OwnerAccount } from '../auth/entities/owner-account.entity';
 import { JwtPayload } from '../auth/interface/jwt-payload.interface';
-import { CALENDAR_SCOPE, googleConfig } from './google-config';
+import { CALENDAR_SCOPE, CALENDAR_READ_SCOPES, googleConfig } from './google-config';
 import { decrypt, encrypt, hash } from './google-crypto';
 import { GoogleGateway } from './google.gateway';
 import { queueGoogleEntries } from './google-outbox';
@@ -94,7 +94,10 @@ export class GoogleService {
         return { mode: 'login', session: this.auth.issueSession(owner as OwnerAccount) };
       });
     }
-    if (!identity.scopes.includes(CALENDAR_SCOPE))
+    const sourceReadEnabled =
+      CALENDAR_READ_SCOPES.every((scope) => identity.scopes.includes(scope)) ||
+      identity.scopes.includes('https://www.googleapis.com/auth/calendar.readonly');
+    if (!identity.scopes.includes(CALENDAR_SCOPE) && !sourceReadEnabled)
       throw new BadRequestException('Falta el permiso del calendario de la aplicación');
     return this.db.transaction(async (m) => {
       const [owner] = await m.query('SELECT * FROM owner_account WHERE id=$1 FOR UPDATE', [attempt.ownerId]);
@@ -115,9 +118,9 @@ export class GoogleService {
       if (!sameIdentity) await m.query('DELETE FROM google_event_mapping WHERE "ownerId"=$1', [owner.id]);
       const [after] = await m.query(
         `INSERT INTO google_connection
-        ("ownerId",subject,email,"refreshTokenEncrypted","calendarId","loginEnabled","calendarEnabled",generation)
-        VALUES ($1,$2,$3,$4,$5,true,true,$6) ON CONFLICT ("ownerId") DO UPDATE SET subject=EXCLUDED.subject,email=EXCLUDED.email,
-        "refreshTokenEncrypted"=EXCLUDED."refreshTokenEncrypted","calendarId"=EXCLUDED."calendarId","loginEnabled"=true,"calendarEnabled"=true,
+        ("ownerId",subject,email,"refreshTokenEncrypted","calendarId","loginEnabled","calendarEnabled",generation,"sourceReadEnabled")
+        VALUES ($1,$2,$3,$4,$5,true,$8,$6,$7) ON CONFLICT ("ownerId") DO UPDATE SET subject=EXCLUDED.subject,email=EXCLUDED.email,
+        "refreshTokenEncrypted"=EXCLUDED."refreshTokenEncrypted","calendarId"=EXCLUDED."calendarId","loginEnabled"=true,"calendarEnabled"=EXCLUDED."calendarEnabled","sourceReadEnabled"=EXCLUDED."sourceReadEnabled",
         "needsReconnect"=false,generation=EXCLUDED.generation,"provisionToken"=NULL,"provisionUntil"=NULL,"provisionAttempts"=0,"lastError"=NULL,"updatedAt"=now() RETURNING *`,
         [
           owner.id,
@@ -126,11 +129,25 @@ export class GoogleService {
           refreshTokenEncrypted,
           sameIdentity ? before.calendarId : null,
           randomUUID(),
+          sourceReadEnabled,
+          sourceReadEnabled ? !!(sameIdentity && before?.calendarEnabled) : true,
         ]
       );
       await queueGoogleEntries(m, owner.id);
+      if (sourceReadEnabled && sameIdentity)
+        await m.query(
+          `UPDATE google_calendar_source SET enabled=true,"nextAttemptAt"=now(),"lastError"=NULL,"lockToken"=NULL,"lockedUntil"=NULL WHERE "ownerId"=$1`,
+          [owner.id]
+        );
       await this.audit(m, owner.id, 'connect', before, after);
-      return { mode: 'connect', googleEmail: identity.email, calendarQueued: true };
+      return sourceReadEnabled
+        ? {
+            mode: 'connect',
+            googleEmail: identity.email,
+            calendarQueued: !!after.calendarEnabled,
+            sourceSelectionRequired: true,
+          }
+        : { mode: 'connect', googleEmail: identity.email, calendarQueued: true };
     });
   }
 
@@ -149,7 +166,7 @@ export class GoogleService {
   async status(ownerId: string) {
     const config = googleConfig(process.env, false);
     const [row] = await this.db.query(
-      `SELECT email,"loginEnabled","calendarEnabled","calendarId","needsReconnect","lastError" FROM google_connection WHERE "ownerId"=$1`,
+      `SELECT email,"loginEnabled","calendarEnabled","calendarId","needsReconnect","lastError","sourceReadEnabled" FROM google_connection WHERE "ownerId"=$1`,
       [ownerId]
     );
     const [jobs] = await this.db.query(
@@ -158,6 +175,16 @@ export class GoogleService {
     );
     const [synced] = await this.db.query(
       `SELECT max("syncedAt") AS "lastSyncedAt" FROM google_event_mapping WHERE "ownerId"=$1`,
+      [ownerId]
+    );
+    const [source] = await this.db.query(
+      `SELECT "calendarId",name,timezone,enabled,"lastSyncedAt","lastError","fullSync","rangeFrom","rangeTo"
+      FROM google_calendar_source WHERE "ownerId"=$1`,
+      [ownerId]
+    );
+    const [imports] = await this.db.query(
+      `SELECT count(*)::int AS total,count(*) FILTER (WHERE e."projectId" IS NULL AND e.status<>'cancelled')::int AS unlinked
+      FROM google_import_event e JOIN google_calendar_source s ON s."ownerId"=e."ownerId" AND s."calendarId"=e."calendarId" WHERE e."ownerId"=$1`,
       [ownerId]
     );
     return {
@@ -171,6 +198,10 @@ export class GoogleService {
       failedJobs: jobs.failed,
       lastSyncedAt: synced.lastSyncedAt,
       errorCode: row?.lastError || null,
+      sourceReadEnabled: !!row?.sourceReadEnabled,
+      source: source || null,
+      importedEvents: imports.total,
+      unlinkedEvents: imports.unlinked,
     };
   }
 
@@ -212,6 +243,11 @@ export class GoogleService {
         [user.id, randomUUID()]
       );
       await m.query('DELETE FROM google_sync_job WHERE "ownerId"=$1', [user.id]);
+      await m.query(`UPDATE google_connection SET "sourceReadEnabled"=false WHERE "ownerId"=$1`, [user.id]);
+      await m.query(
+        `UPDATE google_calendar_source SET enabled=false,generation=uuid_generate_v4(),"lockToken"=NULL,"lockedUntil"=NULL WHERE "ownerId"=$1`,
+        [user.id]
+      );
       await m.query('DELETE FROM google_oauth_state WHERE "ownerId"=$1', [user.id]);
       await this.audit(m, user.id, 'disconnect', before, { ...before, loginEnabled: false, calendarEnabled: false });
     });

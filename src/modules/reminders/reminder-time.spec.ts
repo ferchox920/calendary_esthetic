@@ -56,7 +56,7 @@ describe('Reminder time and runtime policy', () => {
   it('fails closed on runtime mistakes and forbids simulated success in production', () => {
     expect(reminderRuntime({})).toEqual({ workerEnabled: false, provider: 'disabled' });
     expect(() => reminderRuntime({ REMINDERS_WORKER_ENABLED: 'yes' })).toThrow();
-    expect(() => reminderRuntime({ REMINDERS_PROVIDER: 'baileys' })).toThrow();
+    expect(() => reminderRuntime({ REMINDERS_PROVIDER: 'unknown' })).toThrow();
     expect(() => reminderRuntime({ NODE_ENV: 'production', REMINDERS_PROVIDER: 'simulated' })).toThrow();
   });
 });

@@ -75,6 +75,26 @@ Nest is [MIT licensed](LICENSE).
 
 ## Desarrollo local de la agenda de Gabriela
 
+La interfaz privada de Gabriela está en `frontend/`: agenda diaria/semanal,
+clientes, tratamientos, historial y seguimiento. Para compilarla y servirla
+desde la API existente:
+
+```powershell
+npm ci --prefix frontend
+npm run build:all
+npm run start:prod
+```
+
+Abrir `http://127.0.0.1:3000`. El ingreso también ofrece una demostración
+con datos ficticios y sin escrituras. Para desarrollar solo el front,
+ejecutar `npm run front:dev`. Ver [frontend/README.md](frontend/README.md)
+para configurar el origen de la API, recarga automática y validaciones.
+
+Google Calendar puede ser el origen de los horarios: se importa el calendario
+elegido, se leen cambios y cancelaciones, y se vinculan eventos manualmente con
+tratamientos y clientes. La conexión y su estado están en Configuración.
+Ver [preparación y uso de Google Calendar](frontend/GOOGLE-CALENDAR.md).
+
 Base local aislada, configuración de build/tests y acceso privado de Gabriela.
 Node `24.19.0`, npm `11.6.2` (versiones registradas en `.node-version` y `package.json`).
 Se conserva el lockfile y las dependencias previamente actualizadas en el checkout.

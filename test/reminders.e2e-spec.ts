@@ -9,6 +9,12 @@ import { manageOwner } from '../src/modules/auth/owner-management';
 import { ReminderClock, ReminderWorker } from '../src/modules/reminders/reminder-worker.service';
 import { ReminderNotAccepted, ReminderProvider } from '../src/modules/reminders/reminder-provider';
 import { reconcileReminders } from '../src/modules/reminders/reminder-planner';
+import { BaileysReminderProvider } from '../src/modules/reminders/baileys-provider';
+import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import { WhatsAppGateway } from '../src/modules/reminders/whatsapp.gateway';
 
 describe('Persistent reminders (PostgreSQL, simulated network only)', () => {
   let app: NestExpressApplication,
@@ -18,11 +24,13 @@ describe('Persistent reminders (PostgreSQL, simulated network only)', () => {
     clientId: string,
     projectId: string;
   let now: Date;
+  const receiptGateway = { sendReceipt: jest.fn() };
   const clock = { now: () => new Date(now) };
   const fake = {
     name: 'simulated',
+    connectionStatus: () => ({ state: 'not_configured' }),
     available: jest.fn(() => true),
-    send: jest.fn(async (_message: any): Promise<{ accepted: true; messageId: string }> => ({
+    send: jest.fn(async (_message: any): Promise<{ accepted: true; messageId?: string }> => ({
       accepted: true,
       messageId: 'fictitious-message',
     })),
@@ -75,6 +83,24 @@ describe('Persistent reminders (PostgreSQL, simulated network only)', () => {
       : entry;
   }
   const jobs = () => db.query('SELECT * FROM reminder_job ORDER BY "scheduledAt",id');
+  async function uncertainSend() {
+    await enable();
+    await consent();
+    const entry = await book();
+    fake.name = 'baileys';
+    fake.send.mockRejectedValueOnce(new Error('fictitious lost response'));
+    await worker.runOnce(1);
+    const [job] = await jobs(),
+      [attempt] = await db.query('SELECT * FROM reminder_attempt WHERE "jobId"=$1', [job.id]);
+    expect(job.state).toBe('uncertain');
+    return { job, attempt, entry };
+  }
+  const acceptedReceipt = (id: string) => ({
+    attemptId: id,
+    state: 'accepted',
+    messageId: `3EB0${'B'.repeat(36)}`,
+    durable: true,
+  });
   const otherWorker = () => new ReminderWorker(db, fake, clock);
   const defer = () => {
     let resolve: () => void;
@@ -90,6 +116,8 @@ describe('Persistent reminders (PostgreSQL, simulated network only)', () => {
       .useValue(fake)
       .overrideProvider(ReminderClock)
       .useValue(clock)
+      .overrideProvider(WhatsAppGateway)
+      .useValue(receiptGateway)
       .compile();
     app = module.createNestApplication<NestExpressApplication>({ logger: false });
     setupApp(app);
@@ -101,6 +129,8 @@ describe('Persistent reminders (PostgreSQL, simulated network only)', () => {
   });
   beforeEach(async () => {
     now = new Date('2035-06-10T13:00:00Z');
+    fake.name = 'simulated';
+    receiptGateway.sendReceipt.mockReset();
     fake.send.mockReset().mockResolvedValue({ accepted: true, messageId: 'fictitious-message' });
     fake.available.mockReturnValue(true);
     await db.query('TRUNCATE owner_account,client,working_window CASCADE');
@@ -138,8 +168,218 @@ describe('Persistent reminders (PostgreSQL, simulated network only)', () => {
     if (app) await app.close();
   });
 
+  it.each(['accepted', 'uncertain', 'network_lost'])(
+    'persists the Baileys HTTP adapter result %s without retrying unknown acceptance',
+    async (state) => {
+      const directory = await mkdtemp(join(tmpdir(), 'calendary-bridge-e2e-'));
+      await writeFile(join(directory, 'token'), 'fictitious'.padEnd(43, 'x'));
+      const adapter = new BaileysReminderProvider({
+        url: 'http://127.0.0.1:3011',
+        tokenFile: join(directory, 'token'),
+      });
+      const transport = jest.spyOn(globalThis, 'fetch').mockImplementation(async (_url, options) => {
+        const body = JSON.parse(options.body as string);
+        if (state === 'network_lost') throw new Error('fictitious dropped response');
+        return {
+          ok: true,
+          json: async () => ({ attemptId: body.attemptId, state, messageId: `3EB0${'A'.repeat(36)}` }),
+        } as Response;
+      });
+      try {
+        await enable();
+        await consent();
+        await book();
+        fake.send.mockImplementation((message) => adapter.send(message));
+        await worker.runOnce(1);
+        expect((await jobs())[0].state).toBe(state === 'accepted' ? 'sent' : 'uncertain');
+        expect((await db.query('SELECT outcome FROM reminder_attempt'))[0].outcome).toBe(
+          state === 'accepted' ? 'accepted' : 'uncertain'
+        );
+        await otherWorker().runOnce(1);
+        expect(transport).toHaveBeenCalledTimes(1);
+        expect((await req('get', '/reminders/history').expect(200)).body[0]).not.toHaveProperty('phoneE164');
+      } finally {
+        transport.mockRestore();
+        adapter.onModuleDestroy();
+        await rm(directory, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it.each(['accepted', 'not_accepted'])(
+    'reconciles durable %s receipts and never queues another send',
+    async (state) => {
+      const { job, attempt } = await uncertainSend(),
+        key = randomUUID();
+      receiptGateway.sendReceipt.mockResolvedValue(
+        state === 'accepted'
+          ? acceptedReceipt(attempt.id)
+          : { attemptId: attempt.id, state, retryable: true, durable: true }
+      );
+      const result = (await req('post', `/reminders/jobs/${job.id}/reconcile`, key).send({}).expect(201)).body;
+      expect(result.state).toBe(state === 'accepted' ? 'sent' : 'failed');
+      expect(result.changed).toBe(true);
+      const current = (await db.query('SELECT * FROM reminder_attempt WHERE id=$1', [attempt.id]))[0];
+      expect(current.outcome).toBe(state);
+      expect(current.reconciledAt).toEqual(now);
+      expect(current.finishedAt).toEqual(attempt.finishedAt);
+      expect((await req('post', `/reminders/jobs/${job.id}/reconcile`, key).send({}).expect(201)).body).toEqual(result);
+      expect(receiptGateway.sendReceipt).toHaveBeenCalledTimes(1);
+      await worker.runOnce();
+      expect(fake.send).toHaveBeenCalledTimes(1);
+      const history = (await req('get', `/reminders/history?entryId=${job.entryId}`).expect(200)).body;
+      expect(new Date(history.find((j) => j.id === job.id).attemptHistory[0].reconciledAt).toISOString()).toBe(
+        now.toISOString()
+      );
+      expect(
+        (await db.query(`SELECT count(*) FROM audit_event WHERE action='reconciled' AND "entityId"=$1`, [job.id]))[0]
+          .count
+      ).toBe('1');
+    }
+  );
+
+  it.each(['missing', 'unavailable', 'uncertain', 'mismatch', 'not_durable'])(
+    'keeps uncertainty for %s evidence without retrying',
+    async (kind) => {
+      const { job, attempt } = await uncertainSend();
+      if (kind === 'missing') receiptGateway.sendReceipt.mockRejectedValue(new NotFoundException());
+      else if (kind === 'unavailable') receiptGateway.sendReceipt.mockRejectedValue(new ServiceUnavailableException());
+      else
+        receiptGateway.sendReceipt.mockResolvedValue(
+          kind === 'uncertain'
+            ? { attemptId: attempt.id, state: 'uncertain', durable: true }
+            : {
+                ...acceptedReceipt(attempt.id),
+                ...(kind === 'mismatch' ? { attemptId: randomUUID() } : { durable: undefined }),
+              }
+        );
+      const key = randomUUID(),
+        result = (await req('post', `/reminders/jobs/${job.id}/reconcile`, key).send({}).expect(201)).body;
+      expect(result.state).toBe('uncertain');
+      expect(result.changed).toBe(false);
+      expect(
+        (await db.query('SELECT outcome,"reconciledAt" FROM reminder_attempt WHERE id=$1', [attempt.id]))[0]
+      ).toEqual({ outcome: 'uncertain', reconciledAt: null });
+      receiptGateway.sendReceipt.mockResolvedValue(acceptedReceipt(attempt.id));
+      expect((await req('post', `/reminders/jobs/${job.id}/reconcile`, key).send({}).expect(201)).body).toEqual(result);
+      expect(receiptGateway.sendReceipt).toHaveBeenCalledTimes(1);
+      expect((await req('post', `/reminders/jobs/${job.id}/reconcile`).send({}).expect(201)).body.state).toBe('sent');
+      await worker.runOnce();
+      expect(fake.send).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  it('requires authentication/idempotency, validates input, and leaves resolved/unsupported jobs unchanged', async () => {
+    const { job, attempt } = await uncertainSend();
+    await request(app.getHttpServer()).post(`/api/v1/reminders/jobs/${job.id}/reconcile`).send({}).expect(401);
+    await req('post', `/reminders/jobs/${job.id}/reconcile`).unset('Idempotency-Key').send({}).expect(400);
+    await req('post', `/reminders/jobs/${job.id}/reconcile`).send({ resend: true }).expect(400);
+    await req('post', `/reminders/jobs/${randomUUID()}/reconcile`).send({}).expect(404);
+    await db.query(`UPDATE reminder_job SET provider='simulated' WHERE id=$1`, [job.id]);
+    await db.query(`UPDATE reminder_attempt SET provider='simulated' WHERE id=$1`, [attempt.id]);
+    expect((await req('post', `/reminders/jobs/${job.id}/reconcile`).send({}).expect(201)).body.result).toBe(
+      'provider_unsupported'
+    );
+    await db.query(`UPDATE reminder_job SET state='failed' WHERE id=$1`, [job.id]);
+    expect((await req('post', `/reminders/jobs/${job.id}/reconcile`).expect(201)).body.result).toBe('not_uncertain');
+    expect(receiptGateway.sendReceipt).not.toHaveBeenCalled();
+    expect(fake.send).toHaveBeenCalledTimes(1);
+  });
+
+  it('reconciles concurrently only once and records an old accepted send after cancellation/past appointment without changing the session', async () => {
+    const { job, attempt, entry } = await uncertainSend();
+    await req('post', `/sessions/${entry.id}/cancel`)
+      .send({ version: entry.version, reason: 'Fictitious cancel' })
+      .expect(201);
+    now = new Date('2035-06-12T13:00:00Z');
+    const release = defer();
+    receiptGateway.sendReceipt.mockImplementation(async () => {
+      await release.promise;
+      return acceptedReceipt(attempt.id);
+    });
+    const first = req('post', `/reminders/jobs/${job.id}/reconcile`)
+      .send({})
+      .then((r) => r);
+    const second = req('post', `/reminders/jobs/${job.id}/reconcile`)
+      .send({})
+      .then((r) => r);
+    while (receiptGateway.sendReceipt.mock.calls.length < 2) await new Promise((r) => setTimeout(r, 5));
+    release.resolve();
+    const results = await Promise.all([first, second]);
+    expect(results.every((r) => r.status === 201)).toBe(true);
+    expect(results.filter((r) => r.body.changed)).toHaveLength(1);
+    expect((await jobs())[0].state).toBe('sent');
+    expect(
+      (await db.query('SELECT "sessionStatus" FROM schedule_entry WHERE id=$1', [entry.id]))[0].sessionStatus
+    ).toBe('canceled');
+    expect(
+      (await db.query(`SELECT count(*) FROM audit_event WHERE action='reconciled' AND "entityId"=$1`, [job.id]))[0]
+        .count
+    ).toBe('1');
+    await worker.runOnce();
+    expect(fake.send).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects active sends and safely recovers an expired lease before reconciling a persisted receipt', async () => {
+    await enable();
+    await consent();
+    await book();
+    fake.name = 'baileys';
+    const started = defer(),
+      release = defer();
+    fake.send.mockImplementationOnce(async () => {
+      started.resolve();
+      await release.promise;
+      return { accepted: true, messageId: 'late-fiction' };
+    });
+    const processing = worker.runOnce(1);
+    await started.promise;
+    try {
+      const [job] = await jobs(),
+        [attempt] = await db.query('SELECT * FROM reminder_attempt WHERE "jobId"=$1', [job.id]);
+      await req('post', `/reminders/jobs/${job.id}/reconcile`).send({}).expect(409);
+      expect(receiptGateway.sendReceipt).not.toHaveBeenCalled();
+      now = new Date(now.getTime() + 61000);
+      receiptGateway.sendReceipt.mockResolvedValue(acceptedReceipt(attempt.id));
+      expect((await req('post', `/reminders/jobs/${job.id}/reconcile`).send({}).expect(201)).body.state).toBe('sent');
+    } finally {
+      release.resolve();
+      await processing;
+    }
+    expect((await jobs())[0].state).toBe('sent');
+    expect(fake.send).toHaveBeenCalledTimes(1);
+  });
+
+  it('rolls back attempt/history changes when recording the reconciliation fails', async () => {
+    const { job, attempt } = await uncertainSend();
+    receiptGateway.sendReceipt.mockResolvedValue(acceptedReceipt(attempt.id));
+    await db.query(
+      `CREATE FUNCTION test_reconciliation_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Fictitious recording failure'; END $$`
+    );
+    await db.query(
+      `CREATE TRIGGER test_reconciliation_failure BEFORE UPDATE ON reminder_job FOR EACH ROW WHEN (NEW.state='sent') EXECUTE FUNCTION test_reconciliation_failure()`
+    );
+    try {
+      await req('post', `/reminders/jobs/${job.id}/reconcile`).send({}).expect(500);
+      expect((await jobs())[0].state).toBe('uncertain');
+      expect(
+        (await db.query('SELECT outcome,"reconciledAt" FROM reminder_attempt WHERE id=$1', [attempt.id]))[0]
+      ).toEqual({ outcome: 'uncertain', reconciledAt: null });
+      expect(
+        (await db.query(`SELECT count(*) FROM audit_event WHERE action='reconciled' AND "entityId"=$1`, [job.id]))[0]
+          .count
+      ).toBe('0');
+    } finally {
+      await db.query('DROP TRIGGER test_reconciliation_failure ON reminder_job');
+      await db.query('DROP FUNCTION test_reconciliation_failure()');
+    }
+    expect((await req('post', `/reminders/jobs/${job.id}/reconcile`).send({}).expect(201)).body.state).toBe('sent');
+    expect(fake.send).toHaveBeenCalledTimes(1);
+  });
+
   it('is opt-in and requires authenticated, idempotent, versioned writes and valid policies', async () => {
     await request(app.getHttpServer()).get('/api/v1/reminders/history').expect(401);
+    await request(app.getHttpServer()).get('/api/v1/reminders/status').expect(401);
     expect((await req('get', '/reminders/settings').expect(200)).body.enabled).toBe(false);
     await book();
     expect(await jobs()).toHaveLength(0);

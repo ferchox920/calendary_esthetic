@@ -2,6 +2,10 @@ import { ServiceUnavailableException } from '@nestjs/common';
 import { authConfig } from '../auth/auth-config';
 
 export const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.app.created';
+export const CALENDAR_READ_SCOPES = [
+  'https://www.googleapis.com/auth/calendar.events.readonly',
+  'https://www.googleapis.com/auth/calendar.calendarlist.readonly',
+];
 export const GOOGLE_STATE_COOKIE = 'agenda_google_state';
 export const GOOGLE_CALLBACK_PATH = '/api/v1/auth/google/callback';
 

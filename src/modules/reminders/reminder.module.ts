@@ -9,20 +9,32 @@ import {
 } from './reminder-provider';
 import { ReminderService } from './reminder.service';
 import { ReminderClock, ReminderWorker } from './reminder-worker.service';
+import { BaileysReminderProvider } from './baileys-provider';
+import { WhatsAppController } from './whatsapp.controller';
+import { WhatsAppGateway } from './whatsapp.gateway';
+import { WhatsAppService } from './whatsapp.service';
+import { ReminderReconciliation } from './reminder-reconciliation.service';
 
 @Module({
-  controllers: [ReminderController],
+  controllers: [ReminderController, WhatsAppController],
   providers: [
     AgendaStore,
     ReminderService,
     ReminderClock,
     ReminderWorker,
+    ReminderReconciliation,
+    WhatsAppGateway,
+    WhatsAppService,
     {
       provide: ReminderProvider,
-      useFactory: () =>
-        reminderRuntime(process.env).provider === 'simulated'
-          ? new SimulatedReminderProvider()
-          : new DisabledReminderProvider(),
+      useFactory: () => {
+        const provider = reminderRuntime(process.env).provider;
+        return provider === 'baileys'
+          ? new BaileysReminderProvider()
+          : provider === 'simulated'
+            ? new SimulatedReminderProvider()
+            : new DisabledReminderProvider();
+      },
     },
   ],
 })

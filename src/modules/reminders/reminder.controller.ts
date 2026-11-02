@@ -1,25 +1,34 @@
-import { Body, Controller, Get, Headers, Param, ParseUUIDPipe, Patch, Query, Req } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Param, ParseUUIDPipe, Patch, Post, Query, Req } from '@nestjs/common';
 import { ApiOperation, ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
 import { OwnerRequest } from '../agenda/clients-projects.controller';
 import { ClientReminderDto, ReminderHistoryDto, ReminderSettingsDto, SessionReminderDto } from './reminder.dto';
 import { ReminderService } from './reminder.service';
 import { ReminderWorker } from './reminder-worker.service';
+import { ReminderReconciliation } from './reminder-reconciliation.service';
+import { WhatsAppEmptyDto } from './whatsapp.dto';
 
 @ApiBearerAuth()
-@ApiHeader({ name: 'Idempotency-Key', required: false, description: 'Obligatorio para las operaciones de escritura. Usa una clave nueva por operación y reutilízala únicamente al reintentar la misma solicitud con el mismo cuerpo; no se requiere para consultas GET.' })
+@ApiHeader({
+  name: 'Idempotency-Key',
+  required: false,
+  description:
+    'Obligatorio para las operaciones de escritura. Usa una clave nueva por operación y reutilízala únicamente al reintentar la misma solicitud con el mismo cuerpo; no se requiere para consultas GET.',
+})
 @ApiTags('Reminders')
 @Controller()
 export class ReminderController {
   constructor(
     private readonly service: ReminderService,
-    private readonly worker: ReminderWorker
+    private readonly worker: ReminderWorker,
+    private readonly reconciliation: ReminderReconciliation
   ) {}
   @ApiOperation({
     summary: 'Consultar la configuración de recordatorios',
     description:
       'Devuelve la configuración global de envíos, incluidos anticipos, horario permitido, tolerancia, intentos máximos y versión.',
   })
-  @Get('reminders/settings') settings() {
+  @Get('reminders/settings')
+  settings() {
     return this.service.settings();
   }
   @ApiOperation({
@@ -27,27 +36,39 @@ export class ReminderController {
     description:
       'Modifica las reglas globales de envío. Requiere la versión actual y un horario permitido cuyo fin sea posterior al inicio.',
   })
-  @Patch('reminders/settings') updateSettings(
-    @Req() req: OwnerRequest,
-    @Headers('idempotency-key') key: string,
-    @Body() dto: ReminderSettingsDto
-  ) {
+  @Patch('reminders/settings')
+  updateSettings(@Req() req: OwnerRequest, @Headers('idempotency-key') key: string, @Body() dto: ReminderSettingsDto) {
     return this.service.updateSettings(req.user.id, key, dto);
   }
   @ApiOperation({
     summary: 'Consultar el estado del servicio de recordatorios',
-    description:
-      'Devuelve el estado operativo del proceso encargado de enviar recordatorios.',
+    description: 'Devuelve el estado operativo del proceso encargado de enviar recordatorios.',
   })
-  @Get('reminders/status') status() {
+  @Get('reminders/status')
+  status() {
     return this.worker.status();
+  }
+  @ApiOperation({
+    summary: 'Reconciliar un envío incierto mediante su recibo',
+    description:
+      'Consulta el puente sin reenviar. Aceptación concluyente: sent; no aceptación concluyente: failed sin reencolar. Sin evidencia: conserva uncertain. Reusar clave devuelve la observación anterior; usar otra para una nueva consulta.',
+  })
+  @Post('reminders/jobs/:id/reconcile')
+  reconcile(
+    @Req() req: OwnerRequest,
+    @Headers('idempotency-key') key: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() _dto: WhatsAppEmptyDto = {}
+  ) {
+    return this.reconciliation.reconcile(req.user.id, key, id);
   }
   @ApiOperation({
     summary: 'Consultar el historial de recordatorios',
     description:
       'Devuelve recordatorios paginados con su estado y los intentos de envío. Permite filtrar por identificador de sesión y estado.',
   })
-  @Get('reminders/history') history(@Query() dto: ReminderHistoryDto) {
+  @Get('reminders/history')
+  history(@Query() dto: ReminderHistoryDto) {
     return this.service.history(dto);
   }
   @ApiOperation({
@@ -55,7 +76,8 @@ export class ReminderController {
     description:
       'Devuelve la activación, la versión y la disponibilidad de teléfono para recordatorios del cliente. Si no tiene preferencias registradas, devuelve enabled=false y version=0.',
   })
-  @Get('clients/:id/reminders') preference(@Param('id', ParseUUIDPipe) id: string) {
+  @Get('clients/:id/reminders')
+  preference(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.preference(id);
   }
   @ApiOperation({
@@ -63,7 +85,8 @@ export class ReminderController {
     description:
       'Activa o desactiva los recordatorios del cliente con control de versión. La activación requiere un teléfono internacional y aceptación explícita para ese destino; no se permite para clientes archivados.',
   })
-  @Patch('clients/:id/reminders') updatePreference(
+  @Patch('clients/:id/reminders')
+  updatePreference(
     @Req() req: OwnerRequest,
     @Headers('idempotency-key') key: string,
     @Param('id', ParseUUIDPipe) id: string,
@@ -76,7 +99,8 @@ export class ReminderController {
     description:
       'Activa o desactiva los recordatorios de una sesión mediante disabled. Requiere la versión actual de la sesión.',
   })
-  @Patch('sessions/:id/reminders') session(
+  @Patch('sessions/:id/reminders')
+  session(
     @Req() req: OwnerRequest,
     @Headers('idempotency-key') key: string,
     @Param('id', ParseUUIDPipe) id: string,

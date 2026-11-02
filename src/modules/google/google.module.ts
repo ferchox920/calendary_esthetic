@@ -4,10 +4,13 @@ import { GoogleAuthController, GoogleController } from './google.controller';
 import { GoogleGateway } from './google.gateway';
 import { GoogleService } from './google.service';
 import { GoogleSyncService } from './google-sync.service';
+import { AgendaModule } from '../agenda/agenda.module';
+import { GoogleImportService } from './google-import.service';
+import { GoogleImportController } from './google-import.controller';
 
 @Module({
-  imports: [AuthModule],
-  controllers: [GoogleAuthController, GoogleController],
-  providers: [GoogleGateway, GoogleService, GoogleSyncService],
+  imports: [AuthModule, AgendaModule],
+  controllers: [GoogleAuthController, GoogleController, GoogleImportController],
+  providers: [GoogleGateway, GoogleService, GoogleSyncService, GoogleImportService],
 })
 export class GoogleModule {}

@@ -63,10 +63,20 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Build
         run: npm run build
+      - name: Install frontend locked dependencies
+        run: npm ci --prefix frontend --no-audit --no-fund
+      - name: Validate and build frontend
+        run: npm run front:build
+      - name: Frontend date and escaping tests
+        run: npm test --prefix frontend
       - name: Validate TypeScript
         run: npm run typecheck
       - name: Unit tests
         run: npm test
+      - name: Install isolated WhatsApp dependencies
+        run: npm ci --prefix tools/whatsapp-probe --no-audit --no-fund
+      - name: WhatsApp transport tests with simulated sockets only
+        run: npm run whatsapp:test
       - name: Apply migrations to the empty CI database
         run: node node_modules/typeorm/cli.js -d dist/db/data-source.js migration:run
       - name: Verify PostgreSQL migrations and transaction rollback

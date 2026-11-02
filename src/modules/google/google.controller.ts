@@ -60,7 +60,15 @@ export class GoogleAuthController {
         ...config.cookie,
         maxAge: config.seconds * 1000,
       });
+      if (req.headers.accept?.includes('text/html')) {
+        res.redirect(303, `${config.origin}/?google=connected`);
+        return;
+      }
       return { mode: 'login', profile: result.session.profile };
+    }
+    if (req.headers.accept?.includes('text/html')) {
+      res.redirect(303, `${authConfig().origin}/?google=connected`);
+      return;
     }
     return result;
   }
@@ -73,10 +81,10 @@ export class GoogleController {
   constructor(private readonly service: GoogleService) {}
   @ApiOperation({
     summary: 'Consultar el estado de la integración con Google',
-    description:
-      'Devuelve el estado de vinculación y sincronización de Google para la propietaria autenticada.',
+    description: 'Devuelve el estado de vinculación y sincronización de Google para la propietaria autenticada.',
   })
-  @Get() status(@Req() req: OwnerRequest) {
+  @Get()
+  status(@Req() req: OwnerRequest) {
     return this.service.status(req.user.id);
   }
 

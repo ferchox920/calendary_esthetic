@@ -16,5 +16,6 @@ import { AuditController } from './audit.controller';
     AuditController,
   ],
   providers: [AgendaStore, ClientsProjectsService, SchedulingService],
+  exports: [AgendaStore],
 })
 export class AgendaModule {}

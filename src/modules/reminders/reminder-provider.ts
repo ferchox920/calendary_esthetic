@@ -14,6 +14,9 @@ export abstract class ReminderProvider {
   abstract readonly name: string;
   abstract available(): boolean;
   abstract send(message: ReminderMessage): Promise<ReminderAccepted>;
+  connectionStatus(): { state: string } {
+    return { state: 'not_configured' };
+  }
 }
 
 // Only use this when the adapter can prove the provider did not accept this attempt.
@@ -48,7 +51,7 @@ export class SimulatedReminderProvider extends ReminderProvider {
 export function reminderRuntime(env: NodeJS.ProcessEnv) {
   const enabled = env.REMINDERS_WORKER_ENABLED ?? 'false';
   const provider = env.REMINDERS_PROVIDER ?? 'disabled';
-  if (!['true', 'false'].includes(enabled) || !['disabled', 'simulated'].includes(provider))
+  if (!['true', 'false'].includes(enabled) || !['disabled', 'simulated', 'baileys'].includes(provider))
     throw new Error('Invalid reminder runtime configuration');
   if (provider === 'simulated' && !['development', 'test'].includes(env.NODE_ENV))
     throw new Error('Simulated reminders are restricted to development/test');

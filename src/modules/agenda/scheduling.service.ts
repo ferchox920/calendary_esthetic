@@ -140,6 +140,9 @@ export class SchedulingService {
       AND ${activePredicate} AND "occupiedStartAt"<$2 AND $1<"occupiedEndAt" AND ($3::uuid IS NULL OR id<>$3) ORDER BY "startAt"`,
       [entry.occupiedStartAt, entry.occupiedEndAt, excludeId || null]
     );
+    const external = await m.query(`SELECT id,kind,"startAt","endAt",source FROM google_agenda_entry
+      WHERE "inAgenda" AND "occupiesTime" AND "startAt"<$2 AND $1<"endAt"`, [entry.occupiedStartAt, entry.occupiedEndAt]);
+    conflicts.push(...external);
     if (conflicts.length)
       throw new ConflictException({ message: 'El horario está ocupado; elige otro intervalo', conflicts });
   }
@@ -322,13 +325,15 @@ export class SchedulingService {
     return entry;
   }
 
-  private queryRange(m: EntityManager, from: Date, to: Date) {
-    return m.query(
+  private async queryRange(m: EntityManager, from: Date, to: Date) {
+    const local = await m.query(
       `SELECT e.*,p.title AS "projectTitle",c.id AS "clientId",c.name AS "clientName"
       FROM schedule_entry e LEFT JOIN tattoo_project p ON p.id=e."projectId" LEFT JOIN client c ON c.id=p."clientId"
       WHERE e."occupiedStartAt"<$2 AND $1<e."occupiedEndAt" ORDER BY e."startAt",e.id`,
       [from, to]
     );
+    const external = await m.query(`SELECT * FROM google_agenda_entry WHERE "inAgenda" AND "startAt"<$2 AND $1<"endAt"`, [from, to]);
+    return [...local, ...external].sort((a, b) => a.startAt.getTime() - b.startAt.getTime() || a.id.localeCompare(b.id));
   }
 
   range(from: string, to: string) {
@@ -362,7 +367,7 @@ export class SchedulingService {
         (w) => w.weekday === day.dayOfWeek && w.validFrom <= date && (!w.validTo || date <= w.validTo)
       );
       const entries = await this.queryRange(m, bounds.from, bounds.to);
-      const occupied = entries.filter((e) => (e.kind === 'session' ? e.sessionStatus !== 'canceled' : e.blockActive));
+      const occupied = entries.filter((e) => e.source === 'google' ? e.occupiesTime : e.kind === 'session' ? e.sessionStatus !== 'canceled' : e.blockActive);
       const free: { startAt: Date; endAt: Date }[] = [];
       for (const w of windows) {
         // Reject ambiguous/nonexistent wall-clock window boundaries instead of silently shifting them.

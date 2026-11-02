@@ -39,6 +39,7 @@ export class ReminderWorker implements OnApplicationBootstrap, OnModuleDestroy {
       available: this.provider.available(),
       workerEnabled: reminderRuntime(process.env).workerEnabled,
       simulated: this.provider.name === 'simulated',
+      connection: this.provider.connectionStatus?.() || { state: 'not_configured' },
     };
   }
   async runOnce(limit = 20) {

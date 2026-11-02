@@ -14,6 +14,8 @@ const privateFields = new Set([
   'stateHash',
   'lockToken',
   'provisionToken',
+  'syncToken',
+  'pageToken',
 ]);
 
 export function sanitizeResponse(value: any): any {

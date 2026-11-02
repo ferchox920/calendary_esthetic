@@ -100,8 +100,11 @@ export async function encryptedAuthStore(directory, key) {
         const iv = randomBytes(12),
           cipher = createCipheriv('aes-256-gcm', key, iv);
         cipher.setAAD(aad);
+        const persisted = { ...content, creds: { ...content.creds } };
+        // Pairing challenges are ephemeral even inside the encrypted credential file.
+        delete persisted.creds.pairingCode;
         const ciphertext = Buffer.concat([
-          cipher.update(JSON.stringify(content, BufferJSON.replacer), 'utf8'),
+          cipher.update(JSON.stringify(persisted, BufferJSON.replacer), 'utf8'),
           cipher.final(),
         ]);
         const temp = join(directory, 'auth.tmp');
@@ -149,6 +152,12 @@ export async function encryptedAuthStore(directory, key) {
   };
   return {
     state,
+    async reset() {
+      await writes;
+      content = { creds: initAuthCreds(), keys: {} };
+      state.creds = content.creds;
+      await save();
+    },
     async saveCreds(update = {}) {
       Object.assign(content.creds, update);
       await save();
